@@ -1,5 +1,22 @@
 import SwiftUI
 
+#Preview("Live workout") {
+    PhoneLiveView(workout: PhoneWorkout())
+}
+
+#Preview("Running workout reading") {
+    let now = Date()
+    PhoneLiveReading(
+        snapshot: WorkoutSnapshot(
+            sessionID: UUID(), state: .running, heartRate: 124,
+            measuredAt: now.addingTimeInterval(-5),
+            startedAt: now.addingTimeInterval(-600), elapsed: 600, sentAt: now
+        ),
+        disconnected: false, now: now
+    )
+    .padding()
+}
+
 struct PhoneLiveView: View {
     let workout: PhoneWorkout
     var body: some View {

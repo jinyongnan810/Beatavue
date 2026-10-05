@@ -1,6 +1,16 @@
 import Charts
 import SwiftUI
 
+#Preview("History") {
+    HistoryView(store: HistoryStore())
+}
+
+#Preview("Sample list") {
+    NavigationStack {
+        SampleList(samples: [], metric: .heartRate)
+    }
+}
+
 struct HistoryView: View {
     let store: HistoryStore
     @Environment(\.scenePhase) private var scenePhase

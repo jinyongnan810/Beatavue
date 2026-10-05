@@ -1,5 +1,14 @@
 import SwiftUI
 
+#Preview("iPhone tabs") {
+    ContentView(history: HistoryStore(), live: PhoneWorkout())
+}
+
+#Preview("Settings") {
+    @Previewable @State var timeZoneID = "device"
+    SettingsView(timeZoneID: $timeZoneID)
+}
+
 struct ContentView: View {
     let history: HistoryStore
     let live: PhoneWorkout

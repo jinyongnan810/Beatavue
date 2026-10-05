@@ -1,5 +1,9 @@
 import SwiftUI
 
+#Preview("Watch workout") {
+    ContentView(workout: WatchWorkout())
+}
+
 struct ContentView: View {
     let workout: WatchWorkout
     @State private var confirmStart = false
