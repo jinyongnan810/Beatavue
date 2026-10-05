@@ -1,0 +1,554 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 110;
+	objects = {
+
+/* Begin PBXContainerItemProxy section */
+		3FBE14BD3073C15D002E137D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3FBE14A53073C15D002E137D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3FBE14AC3073C15D002E137D;
+			remoteInfo = Beatavue;
+		};
+		3FBE14C73073C15D002E137D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3FBE14A53073C15D002E137D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3FBE14AC3073C15D002E137D;
+			remoteInfo = Beatavue;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		3FBE14AD3073C15D002E137D /* Beatavue.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Beatavue.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3FBE14BC3073C15D002E137D /* BeatavueTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BeatavueTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		3FBE14C63073C15D002E137D /* BeatavueUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BeatavueUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		3FBE14AF3073C15D002E137D /* Beatavue */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Beatavue;
+			sourceTree = "<group>";
+		};
+		3FBE14BF3073C15D002E137D /* BeatavueTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = BeatavueTests;
+			sourceTree = "<group>";
+		};
+		3FBE14C93073C15D002E137D /* BeatavueUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = BeatavueUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		3FBE14AA3073C15D002E137D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
+		3FBE14B93073C15D002E137D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
+		3FBE14C33073C15D002E137D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		3FBE14A43073C15D002E137D = {
+			isa = PBXGroup;
+			children = (
+				3FBE14AF3073C15D002E137D /* Beatavue */,
+				3FBE14BF3073C15D002E137D /* BeatavueTests */,
+				3FBE14C93073C15D002E137D /* BeatavueUITests */,
+				3FBE14AE3073C15D002E137D /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		3FBE14AE3073C15D002E137D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				3FBE14AD3073C15D002E137D /* Beatavue.app */,
+				3FBE14BC3073C15D002E137D /* BeatavueTests.xctest */,
+				3FBE14C63073C15D002E137D /* BeatavueUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		3FBE14AC3073C15D002E137D /* Beatavue */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3FBE14CE3073C15D002E137D /* Build configuration list for PBXNativeTarget "Beatavue" */;
+			buildPhases = (
+				3FBE14A93073C15D002E137D /* Sources */,
+				3FBE14AA3073C15D002E137D /* Frameworks */,
+				3FBE14AB3073C15D002E137D /* Resources */,
+			);
+			buildRules = (
+			);
+			fileSystemSynchronizedGroups = (
+				3FBE14AF3073C15D002E137D /* Beatavue */,
+			);
+			name = Beatavue;
+			productName = Beatavue;
+			productReference = 3FBE14AD3073C15D002E137D /* Beatavue.app */;
+			productType = "com.apple.product-type.application";
+		};
+		3FBE14BB3073C15D002E137D /* BeatavueTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3FBE14D13073C15D002E137D /* Build configuration list for PBXNativeTarget "BeatavueTests" */;
+			buildPhases = (
+				3FBE14B83073C15D002E137D /* Sources */,
+				3FBE14B93073C15D002E137D /* Frameworks */,
+				3FBE14BA3073C15D002E137D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				3FBE14BE3073C15D002E137D /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				3FBE14BF3073C15D002E137D /* BeatavueTests */,
+			);
+			name = BeatavueTests;
+			productName = BeatavueTests;
+			productReference = 3FBE14BC3073C15D002E137D /* BeatavueTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		3FBE14C53073C15D002E137D /* BeatavueUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3FBE14D43073C15D002E137D /* Build configuration list for PBXNativeTarget "BeatavueUITests" */;
+			buildPhases = (
+				3FBE14C23073C15D002E137D /* Sources */,
+				3FBE14C33073C15D002E137D /* Frameworks */,
+				3FBE14C43073C15D002E137D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				3FBE14C83073C15D002E137D /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				3FBE14C93073C15D002E137D /* BeatavueUITests */,
+			);
+			name = BeatavueUITests;
+			productName = BeatavueUITests;
+			productReference = 3FBE14C63073C15D002E137D /* BeatavueUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		3FBE14A53073C15D002E137D /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2700;
+				LastUpgradeCheck = 2700;
+				TargetAttributes = {
+					3FBE14AC3073C15D002E137D = {
+						CreatedOnToolsVersion = 27.0;
+					};
+					3FBE14BB3073C15D002E137D = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = 3FBE14AC3073C15D002E137D;
+					};
+					3FBE14C53073C15D002E137D = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = 3FBE14AC3073C15D002E137D;
+					};
+				};
+			};
+			buildConfigurationList = 3FBE14A83073C15D002E137D /* Build configuration list for PBXProject "Beatavue" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 3FBE14A43073C15D002E137D;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 3FBE14AE3073C15D002E137D /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				3FBE14AC3073C15D002E137D /* Beatavue */,
+				3FBE14BB3073C15D002E137D /* BeatavueTests */,
+				3FBE14C53073C15D002E137D /* BeatavueUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		3FBE14AB3073C15D002E137D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		3FBE14BA3073C15D002E137D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		3FBE14C43073C15D002E137D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		3FBE14A93073C15D002E137D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+		3FBE14B83073C15D002E137D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+		3FBE14C23073C15D002E137D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		3FBE14BE3073C15D002E137D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3FBE14AC3073C15D002E137D /* Beatavue */;
+			targetProxy = 3FBE14BD3073C15D002E137D /* PBXContainerItemProxy */;
+		};
+		3FBE14C83073C15D002E137D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3FBE14AC3073C15D002E137D /* Beatavue */;
+			targetProxy = 3FBE14C73073C15D002E137D /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		3FBE14CC3073C15D002E137D /* Debug configuration for PBXProject "Beatavue" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 6W8B6G9KYD;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		3FBE14CD3073C15D002E137D /* Release configuration for PBXProject "Beatavue" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 6W8B6G9KYD;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		3FBE14CF3073C15D002E137D /* Debug configuration for PBXNativeTarget "Beatavue" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6W8B6G9KYD;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kinn.Beatavue;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		3FBE14D03073C15D002E137D /* Release configuration for PBXNativeTarget "Beatavue" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6W8B6G9KYD;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kinn.Beatavue;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		3FBE14D23073C15D002E137D /* Debug configuration for PBXNativeTarget "BeatavueTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6W8B6G9KYD;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kinn.BeatavueTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Beatavue.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Beatavue";
+			};
+			name = Debug;
+		};
+		3FBE14D33073C15D002E137D /* Release configuration for PBXNativeTarget "BeatavueTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6W8B6G9KYD;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kinn.BeatavueTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Beatavue.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Beatavue";
+			};
+			name = Release;
+		};
+		3FBE14D53073C15D002E137D /* Debug configuration for PBXNativeTarget "BeatavueUITests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6W8B6G9KYD;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kinn.BeatavueUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Beatavue;
+			};
+			name = Debug;
+		};
+		3FBE14D63073C15D002E137D /* Release configuration for PBXNativeTarget "BeatavueUITests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6W8B6G9KYD;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kinn.BeatavueUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Beatavue;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		3FBE14A83073C15D002E137D /* Build configuration list for PBXProject "Beatavue" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3FBE14CC3073C15D002E137D /* Debug configuration for PBXProject "Beatavue" */,
+				3FBE14CD3073C15D002E137D /* Release configuration for PBXProject "Beatavue" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		3FBE14CE3073C15D002E137D /* Build configuration list for PBXNativeTarget "Beatavue" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3FBE14CF3073C15D002E137D /* Debug configuration for PBXNativeTarget "Beatavue" */,
+				3FBE14D03073C15D002E137D /* Release configuration for PBXNativeTarget "Beatavue" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		3FBE14D13073C15D002E137D /* Build configuration list for PBXNativeTarget "BeatavueTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3FBE14D23073C15D002E137D /* Debug configuration for PBXNativeTarget "BeatavueTests" */,
+				3FBE14D33073C15D002E137D /* Release configuration for PBXNativeTarget "BeatavueTests" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		3FBE14D43073C15D002E137D /* Build configuration list for PBXNativeTarget "BeatavueUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3FBE14D53073C15D002E137D /* Debug configuration for PBXNativeTarget "BeatavueUITests" */,
+				3FBE14D63073C15D002E137D /* Release configuration for PBXNativeTarget "BeatavueUITests" */,
+			);
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 3FBE14A53073C15D002E137D /* Project object */;
+	validationLevel = 1;
+}
