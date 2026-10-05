@@ -4,10 +4,48 @@
 <dict>
 	<key>SchemeUserState</key>
 	<dict>
+		<key>Beatavue Watch Watch App.xcscheme_^#shared#^_</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>1</integer>
+		</dict>
 		<key>Beatavue.xcscheme_^#shared#^_</key>
 		<dict>
 			<key>orderHint</key>
 			<integer>0</integer>
+		</dict>
+	</dict>
+	<key>SuppressBuildableAutocreation</key>
+	<dict>
+		<key>3FBE14AC3073C15D002E137D</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>3FBE14BB3073C15D002E137D</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>3FBE14C53073C15D002E137D</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>3FBE14DA3073C745002E137D</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>3FBE14E63073C746002E137D</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>3FBE14F03073C746002E137D</key>
+		<dict>
+			<key>primary</key>
+			<true/>
 		</dict>
 	</dict>
 </dict>
