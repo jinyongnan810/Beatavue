@@ -118,7 +118,7 @@ final class WatchWorkout: NSObject {
             await sendSnapshot()
         } catch {
             phoneConnected = false
-            self.error = "Recording on Watch. \(error.localizedDescription)"
+            self.error = String(localized: "Recording on Watch. \(error.localizedDescription)")
         }
     }
 
@@ -150,7 +150,7 @@ final class WatchWorkout: NSObject {
         } catch {
             guard self.session === session else { return }
             phoneConnected = false
-            self.error = "Recording on Watch. \(error.localizedDescription)"
+            self.error = String(localized: "Recording on Watch. \(error.localizedDescription)")
         }
     }
 
@@ -164,10 +164,10 @@ final class WatchWorkout: NSObject {
             // Saved HealthKit workout, or nil if no workout was returned.
             let workout = try await builder.finishWorkout()
             saved = workout != nil
-            if !saved { error = "Workout not saved." }
+            if !saved { error = String(localized: "Workout not saved.") }
         } catch {
             saved = false
-            self.error = "Could not save: \(error.localizedDescription)"
+            self.error = String(localized: "Could not save: \(error.localizedDescription)")
         }
         guard self.session === session else { return }
         elapsed = builder.elapsedTime
@@ -202,7 +202,7 @@ final class WatchWorkout: NSObject {
             await reconnectPhone()
         } catch {
             phase = .failed
-            self.error = "Could not recover: \(error.localizedDescription)"
+            self.error = String(localized: "Could not recover: \(error.localizedDescription)")
         }
     }
 }
@@ -235,7 +235,7 @@ extension WatchWorkout: HKWorkoutSessionDelegate {
     nonisolated func workoutSession(_ workoutSession: HKWorkoutSession, didFailWithError error: Error) {
         Task { @MainActor in
             guard self.session === workoutSession else { return }
-            self.error = "Workout failed: \(error.localizedDescription)"
+            self.error = String(localized: "Workout failed: \(error.localizedDescription)")
             self.phase = .failed
             await self.sendSnapshot()
             self.heartbeat?.cancel()
@@ -299,6 +299,6 @@ private enum WorkoutError: LocalizedError {
     case workoutPermission
     /// Explanation of the workout permission required to record.
     var errorDescription: String? {
-        "Allow workout access in Health."
+        String(localized: "Allow workout access in Health.")
     }
 }

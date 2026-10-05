@@ -47,7 +47,7 @@ final class HistoryStore {
             cacheLoadTask = nil
         } catch {
             cacheLoadTask = nil
-            cacheError = "Could not read the local cache: \(error.localizedDescription)"
+            cacheError = String(localized: "Could not read the local cache: \(error.localizedDescription)")
         }
     }
 
@@ -138,7 +138,7 @@ final class HistoryStore {
                     try await file.write(cache)
                     cacheError = nil
                 } catch {
-                    cacheError = "History is available in memory, but could not be cached: \(error.localizedDescription)"
+                    cacheError = String(localized: "History is available in memory, but could not be cached: \(error.localizedDescription)")
                 }
             } catch is CancellationError {
                 return

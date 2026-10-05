@@ -10,6 +10,12 @@ import SwiftUI
     SettingsView(timeZoneID: $timeZoneID)
 }
 
+#Preview("設定") {
+    @Previewable @State var timeZoneID = "device"
+    SettingsView(timeZoneID: $timeZoneID)
+        .environment(\.locale, Locale(identifier: "ja"))
+}
+
 /// Displays the iPhone history, live workout, and settings tabs.
 struct ContentView: View {
     /// Shared store for cached and refreshed health history.

@@ -81,7 +81,7 @@ final class PhoneWorkout: NSObject {
                 disconnected = false
                 error = nil
             } catch {
-                self.error = "Could not read Watch update."
+                self.error = String(localized: "Could not read Watch update.")
             }
         }
     }

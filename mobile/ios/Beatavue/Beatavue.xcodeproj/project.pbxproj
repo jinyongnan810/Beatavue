@@ -70,9 +70,22 @@
 		3FBE14F13073C746002E137D /* Beatavue Watch Watch AppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Beatavue Watch Watch AppUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		3F0EC5663074699000E6BA92 /* Exceptions for "Beatavue" folder in "Beatavue" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 3FBE14AC3073C15D002E137D /* Beatavue */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		3FBE14AF3073C15D002E137D /* Beatavue */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				3F0EC5663074699000E6BA92 /* Exceptions for "Beatavue" folder in "Beatavue" target */,
+			);
 			path = Beatavue;
 			sourceTree = "<group>";
 		};
@@ -576,6 +589,7 @@
 				DEVELOPMENT_TEAM = 6W8B6G9KYD;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Beatavue/Info.plist;
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Beatavue reads heart rate and HRV (SDNN) to show your history and mirrored workout readings.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Beatavue saves workouts you explicitly start and stop on Apple Watch to Apple Health.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -612,6 +626,7 @@
 				DEVELOPMENT_TEAM = 6W8B6G9KYD;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Beatavue/Info.plist;
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Beatavue reads heart rate and HRV (SDNN) to show your history and mirrored workout readings.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Beatavue saves workouts you explicitly start and stop on Apple Watch to Apple Health.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
