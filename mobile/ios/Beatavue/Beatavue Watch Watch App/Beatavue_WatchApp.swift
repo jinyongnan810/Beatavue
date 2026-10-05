@@ -1,17 +1,19 @@
-//
-//  Beatavue_WatchApp.swift
-//  Beatavue Watch Watch App
-//
-//  Created by Yuunan kin on 2026/10/05.
-//
-
 import SwiftUI
+import WatchKit
 
 @main
 struct Beatavue_Watch_Watch_AppApp: App {
+    @WKApplicationDelegateAdaptor(WorkoutAppDelegate.self) private var delegate
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(workout: WatchWorkout.shared)
         }
+    }
+}
+
+final class WorkoutAppDelegate: NSObject, WKApplicationDelegate {
+    func handleActiveWorkoutRecovery() {
+        Task { await WatchWorkout.shared.recover() }
     }
 }

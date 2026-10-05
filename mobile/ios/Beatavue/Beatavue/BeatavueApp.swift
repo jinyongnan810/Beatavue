@@ -1,32 +1,13 @@
-//
-//  BeatavueApp.swift
-//  Beatavue
-//
-//  Created by Yuunan kin on 2026/10/05.
-//
-
 import SwiftUI
-import SwiftData
 
 @main
 struct BeatavueApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
-    }()
+    @State private var history = HistoryStore()
+    @State private var live = PhoneWorkout()
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(history: history, live: live)
         }
-        .modelContainer(sharedModelContainer)
     }
 }

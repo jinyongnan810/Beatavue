@@ -1,61 +1,48 @@
-//
-//  ContentView.swift
-//  Beatavue
-//
-//  Created by Yuunan kin on 2026/10/05.
-//
-
 import SwiftUI
-import SwiftData
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
+    let history: HistoryStore
+    let live: PhoneWorkout
+    @AppStorage("displayTimeZone") private var timeZoneID = "device"
 
     var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                    }
-                }
-                .onDelete(perform: deleteItems)
-            }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
-                }
-            }
-        } detail: {
-            Text("Select an item")
+        TabView {
+            HistoryView(store: history)
+                .tabItem { Label("History", systemImage: "chart.xyaxis.line") }
+            PhoneLiveView(workout: live)
+                .tabItem { Label("Live workout", systemImage: "heart.fill") }
+            SettingsView(timeZoneID: $timeZoneID)
+                .tabItem { Label("Settings", systemImage: "gear") }
         }
-    }
-
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
-        }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
-            }
-        }
+        .tint(.pink)
+        .environment(\.timeZone, timeZoneID == "device" ? .autoupdatingCurrent : TimeZone(identifier: timeZoneID) ?? .autoupdatingCurrent)
     }
 }
 
-#Preview {
-    ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
+struct SettingsView: View {
+    @Binding var timeZoneID: String
+    private let zones = TimeZone.knownTimeZoneIdentifiers
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Display timezone") {
+                    Picker("Timezone", selection: $timeZoneID) {
+                        Text("Device timezone").tag("device")
+                        ForEach(zones, id: \.self) { zone in Text(zone).tag(zone) }
+                    }
+                    Text("Dates and day boundaries use this timezone, including daylight-saving changes.")
+                }
+                Section("Your data") {
+                    Text("History is stored only on this iPhone in a protected local cache. It works without a backend or internet connection.")
+                    Text("Apple Watch measurements can take time to appear in iPhone Health. Refresh after the devices synchronize.")
+                }
+                Section("Live workouts") {
+                    Text("Start an Other workout in Beatavue on Apple Watch. Stopping saves the workout to Apple Health. Sensor updates are controlled by the system.")
+                    Text("Readings older than 30 seconds are marked stale. HRV (SDNN) is history only.")
+                }
+            }
+            .navigationTitle("Settings")
+        }
+    }
 }
