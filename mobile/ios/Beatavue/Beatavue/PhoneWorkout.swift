@@ -37,10 +37,9 @@ final class PhoneWorkout: NSObject {
             watchStatus = "No paired Apple Watch"
         } else if !connectivity.isWatchAppInstalled {
             watchStatus = "Install Beatavue on Apple Watch"
-        } else if !connectivity.isReachable {
-            watchStatus = "Watch not reachable. Open Beatavue on Apple Watch to start."
         } else {
-            watchStatus = "Ready. Start a workout in Beatavue on Apple Watch."
+            // WCSession reachability describes its messaging transport, not HealthKit mirroring.
+            watchStatus = "Beatavue is installed on your paired Apple Watch. Start a workout there."
         }
     }
 
@@ -120,10 +119,6 @@ extension PhoneWorkout: WCSessionDelegate {
     nonisolated func sessionDidBecomeInactive(_: WCSession) {}
     nonisolated func sessionDidDeactivate(_ session: WCSession) { session.activate() }
     nonisolated func sessionWatchStateDidChange(_: WCSession) {
-        Task { @MainActor in self.updateWatchStatus() }
-    }
-
-    nonisolated func sessionReachabilityDidChange(_: WCSession) {
         Task { @MainActor in self.updateWatchStatus() }
     }
 }
