@@ -82,7 +82,9 @@ final class HistoryStore {
     /// Refreshes recent and selected history, then reconciles and persists the cache.
     func refresh(interval: DateInterval) async {
         await loadCache()
-        guard available, authorizationRequested, !Task.isCancelled else { return }
+        guard available, !isAuthorizing, !Task.isCancelled else { return }
+        if !authorizationRequested { await authorize() }
+        guard authorizationRequested, !Task.isCancelled else { return }
         // Identifier used to discard results from superseded refresh requests.
         let id = UUID()
         requestID = id

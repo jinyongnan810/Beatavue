@@ -42,7 +42,7 @@ struct HistoryView: View {
                     }
                     .pickerStyle(.segmented)
                     HistoryNavigation(period: $period, date: $date, interval: interval)
-                    HealthAccessView(store: store, refresh: { revision += 1 })
+                    HealthAccessView(store: store)
                     if store.isLoading { ProgressView("Refreshing Apple Health") }
                     if let error = store.errors[metric] { Text(error).foregroundStyle(.orange) }
                     if let error = store.cacheError { Text(error).foregroundStyle(.orange) }
@@ -140,26 +140,12 @@ struct HistoryNavigation: View {
 struct HealthAccessView: View {
     /// Store supplying health data and authorization state.
     let store: HistoryStore
-    /// Callback that requests a refresh after reviewing permissions.
-    let refresh: () -> Void
 
     /// Builds the interface for this view.
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             if store.available {
-                Text("Read heart rate and HRV (SDNN) from Apple Health to view your measurements.")
-                    .font(.subheadline)
-                Button("Review Health permissions") {
-                    Task {
-                        await store.authorize()
-                        refresh()
-                    }
-                }
-                .buttonStyle(.bordered)
-                .disabled(store.isAuthorizing)
                 if let error = store.authorizationError { Text(error).foregroundStyle(.orange) }
-                Text("Manage existing access in the Health app’s privacy settings for Beatavue.")
-                    .font(.caption).foregroundStyle(.secondary)
             } else {
                 Label("Apple Health is unavailable on this device", systemImage: "exclamationmark.circle")
                 Text("Previously cached history remains available.")
