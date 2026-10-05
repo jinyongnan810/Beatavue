@@ -4,10 +4,14 @@ import SwiftUI
     ContentView(workout: WatchWorkout())
 }
 
+/// Displays workout readings and controls on Apple Watch.
 struct ContentView: View {
+    /// Workout model supplying live readings and session state.
     let workout: WatchWorkout
+    /// Whether the workout start confirmation is presented.
     @State private var confirmStart = false
 
+    /// Builds the interface for this view.
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
@@ -32,14 +36,20 @@ struct ContentView: View {
     }
 }
 
+/// Displays the Watch heart rate, elapsed time, and connection status.
 struct WatchLiveReading: View {
+    /// Workout model supplying live readings and session state.
     let workout: WatchWorkout
+    /// Current timestamp used to evaluate freshness and elapsed time.
     let now: Date
 
+    /// Builds the interface for this view.
     var body: some View {
         VStack(spacing: 6) {
             Text(workout.phase.title).font(.caption)
+            // Whether the workout is running or paused.
             let active = workout.phase == .running || workout.phase == .paused
+            // Whether the latest measurement is missing or over 30 seconds old.
             let stale = workout.measuredAt.map { now.timeIntervalSince($0) > 30 } ?? true
             if let rate = workout.heartRate {
                 Text("\(rate, format: .number.precision(.fractionLength(0)))")
@@ -55,6 +65,7 @@ struct WatchLiveReading: View {
             if let measured = workout.measuredAt {
                 Text(measured, format: .dateTime.hour().minute().second()).font(.caption2)
             }
+            // Elapsed time since the last update while the workout is running.
             let extra = workout.phase == .running ? max(0, now.timeIntervalSince(workout.elapsedUpdatedAt)) : 0
             Text(Duration.seconds(workout.elapsed + extra).formatted(.time(pattern: .minuteSecond)))
                 .font(.title3.monospacedDigit())
@@ -67,10 +78,14 @@ struct WatchLiveReading: View {
     }
 }
 
+/// Provides workout start, pause, save, and reconnect actions.
 struct WatchWorkoutControls: View {
+    /// Workout model supplying live readings and session state.
     let workout: WatchWorkout
+    /// Whether the workout start confirmation is presented.
     @Binding var confirmStart: Bool
 
+    /// Builds the interface for this view.
     var body: some View {
         if !workout.available {
             Text("Apple Health unavailable").font(.caption)

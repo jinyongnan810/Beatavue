@@ -5,6 +5,7 @@ import SwiftUI
 }
 
 #Preview("Running workout reading") {
+    /// Current timestamp used to evaluate freshness and elapsed time.
     let now = Date()
     PhoneLiveReading(
         snapshot: WorkoutSnapshot(
@@ -17,8 +18,11 @@ import SwiftUI
     .padding()
 }
 
+/// Displays the mirrored Watch workout and connection status.
 struct PhoneLiveView: View {
+    /// Workout model supplying live readings and session state.
     let workout: PhoneWorkout
+    /// Builds the interface for this view.
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -40,16 +44,24 @@ struct PhoneLiveView: View {
     }
 }
 
+/// Displays the latest workout reading and its freshness.
 struct PhoneLiveReading: View {
+    /// Most recent mirrored workout state and measurement.
     let snapshot: WorkoutSnapshot?
+    /// Whether the mirrored Watch session has disconnected.
     let disconnected: Bool
+    /// Current timestamp used to evaluate freshness and elapsed time.
     let now: Date
 
+    /// Builds the interface for this view.
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             if let snapshot {
+                // Whether the workout is running or paused.
                 let active = snapshot.state == .running || snapshot.state == .paused
+                // Whether an active workout has gone over 15 seconds without an update.
                 let connectionDelayed = active && now.timeIntervalSince(snapshot.sentAt) > 15
+                // Whether the latest measurement is missing or over 30 seconds old.
                 let stale = snapshot.measuredAt.map { now.timeIntervalSince($0) > 30 } ?? true
                 Text(snapshot.state.title).font(.headline)
                 if disconnected || connectionDelayed {
@@ -74,6 +86,7 @@ struct PhoneLiveReading: View {
                     Text("Started \(started, format: .dateTime.month().day().hour().minute())")
                         .font(.caption)
                 }
+                // Elapsed time since the last update while the workout is running.
                 let extra = snapshot.state == .running && !disconnected && !connectionDelayed ? max(0, now.timeIntervalSince(snapshot.sentAt)) : 0
                 Text("Active time: \(Duration.seconds(snapshot.elapsed + extra).formatted(.time(pattern: .minuteSecond)))")
                     .monospacedDigit()

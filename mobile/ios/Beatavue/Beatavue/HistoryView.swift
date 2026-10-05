@@ -11,17 +11,28 @@ import SwiftUI
     }
 }
 
+/// Displays health history for the selected metric and period.
 struct HistoryView: View {
+    /// Store supplying health data and authorization state.
     let store: HistoryStore
+    /// App lifecycle phase used to refresh history on activation.
     @Environment(\.scenePhase) private var scenePhase
+    /// Display timezone supplied by the view environment.
     @Environment(\.timeZone) private var timeZone
+    /// Health metric associated with these measurements.
     @AppStorage("historyMetric") private var metric = HealthMetric.heartRate
+    /// Selected calendar period for browsing history.
     @AppStorage("historyPeriod") private var period = HistoryPeriod.day
+    /// Selected date used to determine the displayed history period.
     @State private var date = Date()
+    /// Refresh counter that restarts the history loading task.
     @State private var revision = 0
 
+    /// Builds the interface for this view.
     var body: some View {
+        // Date range represented by this history request or display.
         let interval = period.interval(containing: date, timeZone: timeZone)
+        // Measurements available for the requested metric and date range.
         let samples = store.samples(metric: metric, interval: interval)
         NavigationStack {
             ScrollView {
@@ -70,17 +81,26 @@ struct HistoryView: View {
     }
 }
 
+/// Identifies the period and revision that trigger a history refresh.
 private struct HistoryRequest: Equatable {
+    /// Date range represented by this history request or display.
     let interval: DateInterval
+    /// Refresh counter that restarts the history loading task.
     let revision: Int
 }
 
+/// Provides period selection and date navigation.
 struct HistoryNavigation: View {
+    /// Selected calendar period for browsing history.
     @Binding var period: HistoryPeriod
+    /// Selected date used to determine the displayed history period.
     @Binding var date: Date
+    /// Date range represented by this history request or display.
     let interval: DateInterval
+    /// Display timezone supplied by the view environment.
     @Environment(\.timeZone) private var timeZone
 
+    /// Builds the interface for this view.
     var body: some View {
         VStack {
             Picker("Period", selection: $period) {
@@ -105,7 +125,9 @@ struct HistoryNavigation: View {
         }
     }
 
+    /// Moves the selected date by a calendar period without going into the future.
     private func move(_ amount: Int) {
+        // Calendar used to calculate date boundaries.
         var calendar = Calendar.autoupdatingCurrent
         calendar.timeZone = timeZone
         if let moved = calendar.date(byAdding: period.component, value: amount, to: date) {
@@ -114,10 +136,14 @@ struct HistoryNavigation: View {
     }
 }
 
+/// Displays Health availability and authorization controls.
 struct HealthAccessView: View {
+    /// Store supplying health data and authorization state.
     let store: HistoryStore
+    /// Callback that requests a refresh after reviewing permissions.
     let refresh: () -> Void
 
+    /// Builds the interface for this view.
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             if store.available {
@@ -142,10 +168,14 @@ struct HealthAccessView: View {
     }
 }
 
+/// Displays the latest accessible measurement and its source.
 struct LatestSampleView: View {
+    /// Measurement displayed by this view.
     let sample: HealthSample?
+    /// Health metric associated with these measurements.
     let metric: HealthMetric
 
+    /// Builds the interface for this view.
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("Latest available").font(.subheadline).foregroundStyle(.secondary)
@@ -163,13 +193,20 @@ struct LatestSampleView: View {
     }
 }
 
+/// Plots measured samples and supports inspecting nearby readings.
 struct HistoryChart: View {
+    /// Measurements available for the requested metric and date range.
     let samples: [HealthSample]
+    /// Health metric associated with these measurements.
     let metric: HealthMetric
+    /// Date range represented by this history request or display.
     let interval: DateInterval
+    /// Chart timestamp selected for inspecting nearby measurements.
     @State private var selectedDate: Date?
+    /// Display timezone supplied by the view environment.
     @Environment(\.timeZone) private var timeZone
 
+    /// Builds the interface for this view.
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(metric.title).font(.headline)
@@ -203,6 +240,7 @@ struct HistoryChart: View {
                 Text("Touch the graph to inspect the nearest measured sample. All points are raw measurements.")
                     .font(.caption).foregroundStyle(.secondary)
                 if let selectedDate,
+                   // Sample closest to the timestamp selected on the chart.
                    let nearest = samples.min(by: { abs($0.start.timeIntervalSince(selectedDate)) < abs($1.start.timeIntervalSince(selectedDate)) })
                 {
                     // Retain overlapping measurements from different sources at the same timestamp.
@@ -214,18 +252,25 @@ struct HistoryChart: View {
         }
     }
 
+    /// Timezone-aware axis labels suited to the displayed interval.
     private var axisDateFormat: Date.FormatStyle {
+        // Base date formatter configured for the display timezone.
         let format = Date.FormatStyle(timeZone: timeZone)
         return interval.duration <= 90000 ? format.hour().minute() : format.month().day()
     }
 }
 
+/// Displays minimum, maximum, and mean sample values.
 struct SampleSummary: View {
+    /// Measurements available for the requested metric and date range.
     let samples: [HealthSample]
+    /// Unit label used to display measurement values.
     let unit: String
 
+    /// Builds the interface for this view.
     var body: some View {
         if !samples.isEmpty {
+            // Measurement values used to calculate summary statistics.
             let values = samples.map(\.value)
             VStack(alignment: .leading, spacing: 8) {
                 Text("Selected period · \(samples.count) samples").font(.headline)
@@ -237,17 +282,24 @@ struct SampleSummary: View {
     }
 }
 
+/// Lists individual measurements for the selected metric.
 struct SampleList: View {
+    /// Measurements available for the requested metric and date range.
     let samples: [HealthSample]
+    /// Health metric associated with these measurements.
     let metric: HealthMetric
+    /// Builds the interface for this view.
     var body: some View {
         List(samples) { sample in SampleDetail(sample: sample) }
             .navigationTitle(Text(metric.title))
     }
 }
 
+/// Displays a measurement, timestamp, and source metadata.
 struct SampleDetail: View {
+    /// Measurement displayed by this view.
     let sample: HealthSample
+    /// Builds the interface for this view.
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("\(sample.value, format: .number.precision(.fractionLength(1))) \(sample.metric.unit)").font(.headline)

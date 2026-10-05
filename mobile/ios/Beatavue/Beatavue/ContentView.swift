@@ -5,15 +5,21 @@ import SwiftUI
 }
 
 #Preview("Settings") {
+    /// Selected display timezone identifier; device follows system settings.
     @Previewable @State var timeZoneID = "device"
     SettingsView(timeZoneID: $timeZoneID)
 }
 
+/// Displays the iPhone history, live workout, and settings tabs.
 struct ContentView: View {
+    /// Shared store for cached and refreshed health history.
     let history: HistoryStore
+    /// Shared receiver for mirrored Watch workouts.
     let live: PhoneWorkout
+    /// Selected display timezone identifier; device follows system settings.
     @AppStorage("displayTimeZone") private var timeZoneID = "device"
 
+    /// Builds the interface for this view.
     var body: some View {
         TabView {
             HistoryView(store: history)
@@ -28,10 +34,14 @@ struct ContentView: View {
     }
 }
 
+/// Displays timezone preferences and health data guidance.
 struct SettingsView: View {
+    /// Selected display timezone identifier; device follows system settings.
     @Binding var timeZoneID: String
+    /// Known timezone identifiers offered by the picker.
     private let zones = TimeZone.knownTimeZoneIdentifiers
 
+    /// Builds the interface for this view.
     var body: some View {
         NavigationStack {
             Form {
