@@ -66,11 +66,9 @@ struct HistoryView: View {
                 }
                 .padding()
             }
-            .navigationTitle("Beatavue")
-            .toolbar {
-                Button("Refresh", systemImage: "arrow.clockwise") { revision += 1 }
-            }
             .refreshable { await store.refresh(interval: interval) }
+            .navigationTitle("Beatavue")
+
             .task(id: HistoryRequest(interval: interval, revision: revision)) {
                 await store.refresh(interval: interval)
             }
