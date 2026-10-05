@@ -29,7 +29,7 @@ final class WatchWorkout: NSObject {
     @ObservationIgnored private let store = HKHealthStore()
     /// HealthKit workout session managed by this model.
     @ObservationIgnored private var session: HKWorkoutSession?
-    /// Live workout builder collecting and saving HealthKit measurements.
+    /// Live builder collecting and saving HealthKit measurements.
     @ObservationIgnored private var builder: HKLiveWorkoutBuilder?
     /// Identifier shared by updates from the same workout session.
     @ObservationIgnored private var sessionID = UUID()
@@ -62,7 +62,7 @@ final class WatchWorkout: NSObject {
             configuration.locationType = .unknown
             // HealthKit workout session managed by this model.
             let session = try HKWorkoutSession(healthStore: store, configuration: configuration)
-            // Live workout builder collecting and saving HealthKit measurements.
+            // Live builder collecting and saving HealthKit measurements.
             let builder = session.associatedWorkoutBuilder()
             // Live data source configured to collect heart rate only.
             let source = HKLiveWorkoutDataSource(healthStore: store, workoutConfiguration: configuration)
@@ -118,7 +118,7 @@ final class WatchWorkout: NSObject {
             await sendSnapshot()
         } catch {
             phoneConnected = false
-            self.error = "iPhone disconnected: \(error.localizedDescription). Recording continues on Apple Watch."
+            self.error = "Recording on Watch. \(error.localizedDescription)"
         }
     }
 
@@ -150,7 +150,7 @@ final class WatchWorkout: NSObject {
         } catch {
             guard self.session === session else { return }
             phoneConnected = false
-            self.error = "iPhone disconnected: \(error.localizedDescription). Recording continues on Apple Watch."
+            self.error = "Recording on Watch. \(error.localizedDescription)"
         }
     }
 
@@ -164,10 +164,10 @@ final class WatchWorkout: NSObject {
             // Saved HealthKit workout, or nil if no workout was returned.
             let workout = try await builder.finishWorkout()
             saved = workout != nil
-            if !saved { error = "The workout ended, but Apple Health did not return a saved workout." }
+            if !saved { error = "Workout not saved." }
         } catch {
             saved = false
-            self.error = "The workout could not be saved: \(error.localizedDescription)"
+            self.error = "Could not save: \(error.localizedDescription)"
         }
         guard self.session === session else { return }
         elapsed = builder.elapsedTime
@@ -202,7 +202,7 @@ final class WatchWorkout: NSObject {
             await reconnectPhone()
         } catch {
             phase = .failed
-            self.error = "Could not recover the workout: \(error.localizedDescription)"
+            self.error = "Could not recover: \(error.localizedDescription)"
         }
     }
 }
@@ -299,6 +299,6 @@ private enum WorkoutError: LocalizedError {
     case workoutPermission
     /// Explanation of the workout permission required to record.
     var errorDescription: String? {
-        "Allow Beatavue to save workouts in Health permissions to start a recording."
+        "Allow workout access in Health."
     }
 }

@@ -17,7 +17,7 @@ struct HistoryView: View {
     let store: HistoryStore
     /// App lifecycle phase used to refresh history on activation.
     @Environment(\.scenePhase) private var scenePhase
-    /// Display timezone supplied by the view environment.
+    /// Timezone supplied by the view environment.
     @Environment(\.timeZone) private var timeZone
     /// Health metric associated with these measurements.
     @AppStorage("historyMetric") private var metric = HealthMetric.heartRate
@@ -43,32 +43,29 @@ struct HistoryView: View {
                     .pickerStyle(.segmented)
                     HistoryNavigation(period: $period, date: $date, interval: interval)
                     HealthAccessView(store: store)
-                    if store.isLoading { ProgressView("Refreshing Apple Health") }
+                    if store.isLoading { ProgressView("Refreshing…") }
                     if let error = store.errors[metric] { Text(error).foregroundStyle(.orange) }
                     if let error = store.cacheError { Text(error).foregroundStyle(.orange) }
                     LatestSampleView(sample: store.cache.latest.first { $0.metric == metric }, metric: metric)
                     HistoryChart(samples: samples, metric: metric, interval: interval)
                     SampleSummary(samples: samples, unit: metric.unit)
                     if let refreshed = store.lastRefresh(metric: metric, interval: interval) {
-                        Text("This period refreshed \(refreshed, format: .dateTime.month().day().hour().minute())")
+                        Text("Updated \(refreshed, format: .dateTime.month().day().hour().minute())")
                             .font(.caption).foregroundStyle(.secondary)
                     } else {
-                        Text("This period has not been refreshed. Cached samples may be incomplete.")
+                        Text("Not refreshed")
                             .font(.caption).foregroundStyle(.secondary)
                     }
-                    Text("Points are measured samples from all accessible sources. Gaps mean no accessible readings; samples are not continuous or time weighted.")
-                        .font(.caption).foregroundStyle(.secondary)
                     NavigationLink {
                         SampleList(samples: samples, metric: metric)
                     } label: {
-                        Label("Inspect all \(samples.count) samples", systemImage: "list.bullet")
+                        Label("\(samples.count) samples", systemImage: "list.bullet")
                     }
                 }
                 .padding()
             }
             .refreshable { await store.refresh(interval: interval) }
             .navigationTitle("Beatavue")
-
             .task(id: HistoryRequest(interval: interval, revision: revision)) {
                 await store.refresh(interval: interval)
             }
@@ -95,7 +92,7 @@ struct HistoryNavigation: View {
     @Binding var date: Date
     /// Date range represented by this history request or display.
     let interval: DateInterval
-    /// Display timezone supplied by the view environment.
+    /// Timezone supplied by the view environment.
     @Environment(\.timeZone) private var timeZone
 
     /// Builds the interface for this view.
@@ -145,8 +142,8 @@ struct HealthAccessView: View {
             if store.available {
                 if let error = store.authorizationError { Text(error).foregroundStyle(.orange) }
             } else {
-                Label("Apple Health is unavailable on this device", systemImage: "exclamationmark.circle")
-                Text("Previously cached history remains available.")
+                Label("Health unavailable", systemImage: "exclamationmark.circle")
+                Text("Showing saved history.")
             }
         }
     }
@@ -162,15 +159,15 @@ struct LatestSampleView: View {
     /// Builds the interface for this view.
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Latest available").font(.subheadline).foregroundStyle(.secondary)
+            Text("Latest").font(.subheadline).foregroundStyle(.secondary)
             if let sample {
                 Text("\(sample.value, format: .number.precision(.fractionLength(1))) \(metric.unit)")
                     .font(.largeTitle.bold())
                 Text(sample.start, format: .dateTime.year().month().day().hour().minute().second())
                 Text(sample.sourceName).font(.caption).foregroundStyle(.secondary)
             } else {
-                Text("No accessible data").font(.headline)
-                Text("Check Health permissions and allow time for Apple Watch to sync. Read authorization cannot be inferred from an empty result.")
+                Text("No data").font(.headline)
+                Text("Check Health access and Watch sync.")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }
@@ -187,7 +184,7 @@ struct HistoryChart: View {
     let interval: DateInterval
     /// Chart timestamp selected for inspecting nearby measurements.
     @State private var selectedDate: Date?
-    /// Display timezone supplied by the view environment.
+    /// Timezone supplied by the view environment.
     @Environment(\.timeZone) private var timeZone
 
     /// Builds the interface for this view.
@@ -195,8 +192,8 @@ struct HistoryChart: View {
         VStack(alignment: .leading, spacing: 12) {
             Text(metric.title).font(.headline)
             if samples.isEmpty {
-                ContentUnavailableView("No accessible data", systemImage: "heart",
-                                       description: Text("Try another date, review Health permissions, or refresh after Watch synchronization."))
+                ContentUnavailableView("No data", systemImage: "heart",
+                                       description: Text("Try another date or pull to refresh."))
             } else {
                 Chart(samples) { sample in
                     PointMark(x: .value("Measurement time", sample.start),
@@ -221,7 +218,7 @@ struct HistoryChart: View {
                 .chartLegend(.hidden)
                 .frame(height: 240)
                 .accessibilityLabel(Text(metric.title))
-                Text("Touch the graph to inspect the nearest measured sample. All points are raw measurements.")
+                Text("Tap a point for details.")
                     .font(.caption).foregroundStyle(.secondary)
                 if let selectedDate,
                    // Sample closest to the timestamp selected on the chart.
@@ -257,10 +254,10 @@ struct SampleSummary: View {
             // Measurement values used to calculate summary statistics.
             let values = samples.map(\.value)
             VStack(alignment: .leading, spacing: 8) {
-                Text("Selected period · \(samples.count) samples").font(.headline)
-                LabeledContent("Minimum", value: "\(values.min()!.formatted(.number.precision(.fractionLength(1)))) \(unit)")
-                LabeledContent("Maximum", value: "\(values.max()!.formatted(.number.precision(.fractionLength(1)))) \(unit)")
-                LabeledContent("Average of available samples", value: "\((values.reduce(0, +) / Double(values.count)).formatted(.number.precision(.fractionLength(1)))) \(unit)")
+                Text("\(samples.count) samples").font(.headline)
+                LabeledContent("Min", value: "\(values.min()!.formatted(.number.precision(.fractionLength(1)))) \(unit)")
+                LabeledContent("Max", value: "\(values.max()!.formatted(.number.precision(.fractionLength(1)))) \(unit)")
+                LabeledContent("Average", value: "\((values.reduce(0, +) / Double(values.count)).formatted(.number.precision(.fractionLength(1)))) \(unit)")
             }
         }
     }

@@ -24,12 +24,12 @@ nonisolated enum WorkoutPhase: String, Codable, Sendable {
     /// Localized label for this option or workout state.
     var title: LocalizedStringResource {
         switch self {
-        case .idle: "Start a workout on Apple Watch"
-        case .starting: "Starting workout"
-        case .running: "Workout running"
-        case .paused: "Workout paused"
-        case .saving: "Saving workout"
-        case .ended: "Workout ended"
+        case .idle: "Ready"
+        case .starting: "Starting…"
+        case .running: "Running"
+        case .paused: "Paused"
+        case .saving: "Saving…"
+        case .ended: "Ended"
         case .failed: "Workout failed"
         }
     }

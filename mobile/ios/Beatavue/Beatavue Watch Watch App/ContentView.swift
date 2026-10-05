@@ -23,15 +23,15 @@ struct ContentView: View {
                 if let error = workout.error {
                     Text(error).font(.caption).foregroundStyle(.orange)
                 }
-                if workout.saved { Text("Saved to Apple Health").font(.caption) }
+                if workout.saved { Text("Saved to Health").font(.caption) }
             }
             .padding(.horizontal)
         }
         .tint(.pink)
-        .confirmationDialog("Start an Other workout?", isPresented: $confirmStart, titleVisibility: .visible) {
+        .confirmationDialog("Start workout?", isPresented: $confirmStart, titleVisibility: .visible) {
             Button("Start workout") { Task { await workout.start() } }
         } message: {
-            Text("Records heart rate and mirrors it to iPhone. Stopping saves this workout to Apple Health. This is not continuous all-day monitoring.")
+            Text("Records heart rate. Stop to save to Health.")
         }
     }
 }
@@ -55,12 +55,12 @@ struct WatchLiveReading: View {
                 Text("\(rate, format: .number.precision(.fractionLength(0)))")
                     .font(.system(size: 44, weight: .bold, design: .rounded))
                     .foregroundStyle(active && !stale ? Color.pink : Color.secondary)
-                Text("bpm · last measurement").font(.caption2)
+                Text("bpm").font(.caption2)
             } else if active {
-                Text("Waiting for heart rate").font(.caption)
+                Text("Measuring…").font(.caption)
             }
             if active, stale, workout.measuredAt != nil {
-                Text("Stale reading").font(.caption).foregroundStyle(.orange)
+                Text("Reading over 30s old").font(.caption).foregroundStyle(.orange)
             }
             if let measured = workout.measuredAt {
                 Text(measured, format: .dateTime.hour().minute().second()).font(.caption2)
@@ -70,7 +70,8 @@ struct WatchLiveReading: View {
             Text(Duration.seconds(workout.elapsed + extra).formatted(.time(pattern: .minuteSecond)))
                 .font(.title3.monospacedDigit())
             if active {
-                Text(workout.phoneConnected ? "iPhone connected" : "iPhone disconnected")
+                Label(workout.phoneConnected ? "iPhone connected" : "iPhone disconnected", systemImage: workout.phoneConnected ? "iphone" : "iphone.slash")
+                    .labelStyle(.iconOnly)
                     .font(.caption2)
                     .foregroundStyle(workout.phoneConnected ? Color.secondary : Color.orange)
             }
@@ -90,10 +91,12 @@ struct WatchWorkoutControls: View {
         if !workout.available {
             Text("Apple Health unavailable").font(.caption)
         } else if workout.phase == .running || workout.phase == .paused {
-            Button(workout.phase == .paused ? "Resume workout" : "Pause workout") { workout.togglePause() }
-            Button("Stop and save", role: .destructive) { workout.stop() }
+            Button(workout.phase == .paused ? "Resume workout" : "Pause workout", systemImage: workout.phase == .paused ? "play.fill" : "pause.fill") { workout.togglePause() }
+                .labelStyle(.iconOnly)
+            Button("Stop and save", systemImage: "stop.fill", role: .destructive) { workout.stop() }
+                .labelStyle(.iconOnly)
             if !workout.phoneConnected {
-                Button("Reconnect iPhone") { Task { await workout.reconnectPhone() } }
+                Button("Reconnect", systemImage: "iphone") { Task { await workout.reconnectPhone() } }
             }
         } else {
             Button("Start workout") { confirmStart = true }

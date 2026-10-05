@@ -25,7 +25,7 @@ struct ContentView: View {
             HistoryView(store: history)
                 .tabItem { Label("History", systemImage: "chart.xyaxis.line") }
             PhoneLiveView(workout: live)
-                .tabItem { Label("Live workout", systemImage: "heart.fill") }
+                .tabItem { Label("Live", systemImage: "heart.fill") }
             SettingsView(timeZoneID: $timeZoneID)
                 .tabItem { Label("Settings", systemImage: "gear") }
         }
@@ -45,20 +45,19 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Display timezone") {
+                Section("Timezone") {
                     Picker("Timezone", selection: $timeZoneID) {
-                        Text("Device timezone").tag("device")
+                        Text("Device").tag("device")
                         ForEach(zones, id: \.self) { zone in Text(zone).tag(zone) }
                     }
-                    Text("Dates and day boundaries use this timezone, including daylight-saving changes.")
                 }
                 Section("Your data") {
-                    Text("History is stored only on this iPhone in a protected local cache. It works without a backend or internet connection.")
-                    Text("Apple Watch measurements can take time to appear in iPhone Health. Refresh after the devices synchronize.")
+                    Text("Stored on this iPhone. No internet needed.")
+                    Text("Watch data appears after syncing.")
                 }
-                Section("Live workouts") {
-                    Text("Start an Other workout in Beatavue on Apple Watch. Stopping saves the workout to Apple Health. Sensor updates are controlled by the system.")
-                    Text("Readings older than 30 seconds are marked stale. HRV (SDNN) is history only.")
+                Section("Workouts") {
+                    Text("Start on Apple Watch. Stop to save to Health.")
+                    Text("HRV is available in History.")
                 }
             }
             .navigationTitle("Settings")

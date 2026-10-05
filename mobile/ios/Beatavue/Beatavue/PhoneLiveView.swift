@@ -1,6 +1,6 @@
 import SwiftUI
 
-#Preview("Live workout") {
+#Preview("Live") {
     PhoneLiveView(workout: PhoneWorkout())
 }
 
@@ -32,13 +32,11 @@ struct PhoneLiveView: View {
                     }
                     Text(workout.watchStatus).font(.subheadline)
                     if let error = workout.error { Text(error).foregroundStyle(.orange) }
-                    Text("Start, pause, or stop an Other workout in Beatavue on your Apple Watch. Stopping saves it to Apple Health.")
-                    Text("Updates follow the sensor and system cadence. A reading becomes stale after 30 seconds. Watch history can appear later after synchronization.")
-                        .font(.caption).foregroundStyle(.secondary)
+                    Text("Start on Apple Watch.")
                 }
                 .padding()
             }
-            .navigationTitle("Live workout")
+            .navigationTitle("Live")
             .onAppear { workout.updateWatchStatus() }
         }
     }
@@ -65,16 +63,16 @@ struct PhoneLiveReading: View {
                 let stale = snapshot.measuredAt.map { now.timeIntervalSince($0) > 30 } ?? true
                 Text(snapshot.state.title).font(.headline)
                 if disconnected || connectionDelayed {
-                    Label("Watch disconnected or updates delayed", systemImage: "wifi.slash").foregroundStyle(.orange)
-                    Text("Use Reconnect iPhone on Apple Watch while the workout is active.")
+                    Label("Watch disconnected", systemImage: "wifi.slash").foregroundStyle(.orange)
+                    Text("Tap Reconnect on Apple Watch.")
                         .font(.caption)
                 } else if snapshot.state == .running, snapshot.heartRate == nil {
-                    Text("Waiting for a heart-rate measurement")
+                    Text("Measuring…")
                 } else if active, stale {
-                    Label("Stale reading — waiting for a new measurement", systemImage: "clock").foregroundStyle(.orange)
+                    Label("Reading over 30s old", systemImage: "clock").foregroundStyle(.orange)
                 }
                 if let value = snapshot.heartRate {
-                    Text("Last measurement").font(.caption).foregroundStyle(.secondary)
+                    Text("Latest").font(.caption).foregroundStyle(.secondary)
                     Text("\(value, format: .number.precision(.fractionLength(0))) bpm")
                         .font(.largeTitle.bold())
                         .foregroundStyle(stale || disconnected || connectionDelayed || !active ? Color.secondary : Color.pink)
@@ -88,12 +86,11 @@ struct PhoneLiveReading: View {
                 }
                 // Elapsed time since the last update while the workout is running.
                 let extra = snapshot.state == .running && !disconnected && !connectionDelayed ? max(0, now.timeIntervalSince(snapshot.sentAt)) : 0
-                Text("Active time: \(Duration.seconds(snapshot.elapsed + extra).formatted(.time(pattern: .minuteSecond)))")
+                Label("\(Duration.seconds(snapshot.elapsed + extra).formatted(.time(pattern: .minuteSecond)))", systemImage: "timer")
                     .monospacedDigit()
             } else {
-                Text("Waiting for Apple Watch").font(.title2.bold())
+                Text("Ready for Apple Watch").font(.title2.bold())
                 if disconnected { Text("Watch disconnected").foregroundStyle(.orange) }
-                Text("Your workout heart rate and measurement time will appear here when the session is mirrored.")
             }
         }
     }

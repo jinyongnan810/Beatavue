@@ -11,7 +11,7 @@ final class PhoneWorkout: NSObject {
     /// Whether the mirrored Watch session has disconnected.
     private(set) var disconnected = false
     /// Localized status of the paired Watch and its app installation.
-    private(set) var watchStatus: LocalizedStringResource = "Checking Apple Watch"
+    private(set) var watchStatus: LocalizedStringResource = "Checking Watch…"
     /// Most recent workout or connection error shown to the user.
     private(set) var error: String?
     /// HealthKit store used to manage workout sessions and permissions.
@@ -34,7 +34,7 @@ final class PhoneWorkout: NSObject {
             connectivity?.delegate = self
             connectivity?.activate()
         } else {
-            watchStatus = "Apple Watch connectivity unavailable"
+            watchStatus = "Watch unavailable"
         }
     }
 
@@ -42,14 +42,14 @@ final class PhoneWorkout: NSObject {
     func updateWatchStatus() {
         guard let connectivity else { return }
         if connectivity.activationState != .activated {
-            watchStatus = "Checking Apple Watch"
+            watchStatus = "Checking Watch…"
         } else if !connectivity.isPaired {
-            watchStatus = "No paired Apple Watch"
+            watchStatus = "No paired Watch"
         } else if !connectivity.isWatchAppInstalled {
             watchStatus = "Install Beatavue on Apple Watch"
         } else {
             // WCSession reachability describes its messaging transport, not HealthKit mirroring.
-            watchStatus = "Beatavue is installed on your paired Apple Watch. Start a workout there."
+            watchStatus = "Watch ready"
         }
     }
 
@@ -81,7 +81,7 @@ final class PhoneWorkout: NSObject {
                 disconnected = false
                 error = nil
             } catch {
-                self.error = "Could not read an update from Apple Watch."
+                self.error = "Could not read Watch update."
             }
         }
     }
