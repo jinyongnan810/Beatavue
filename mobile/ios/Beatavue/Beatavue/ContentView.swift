@@ -24,6 +24,7 @@ struct ContentView: View {
     let live: PhoneWorkout
     /// Selected display timezone identifier; device follows system settings.
     @AppStorage("displayTimeZone") private var timeZoneID = "device"
+    @Environment(\.scenePhase) private var scenePhase
 
     /// Builds the interface for this view.
     var body: some View {
@@ -37,6 +38,12 @@ struct ContentView: View {
         }
         .tint(.pink)
         .environment(\.timeZone, timeZoneID == "device" ? .autoupdatingCurrent : TimeZone(identifier: timeZoneID) ?? .autoupdatingCurrent)
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                CloudSync.shared.start()
+                Task { await CloudSync.shared.syncNow() }
+            }
+        }
     }
 }
 
@@ -58,9 +65,10 @@ struct SettingsView: View {
                     }
                 }
                 Section("Your data") {
-                    Text("Stored on this iPhone. No internet needed.")
+                    Text("History is cached on this iPhone. Cloud publishing is optional.")
                     Text("Watch data appears after syncing.")
                 }
+                CloudSyncView(sync: CloudSync.shared)
                 Section("Workouts") {
                     Text("Start on Apple Watch. Stop to save to Health.")
                     Text("HRV is available in History.")

@@ -1,4 +1,4 @@
-# Beatavue Scope 1
+# Beatavue iPhone and Watch
 
 Beatavue displays local Apple Health heart-rate and HRV (SDNN) history and mirrors an explicitly started Apple Watch workout to iPhone. Scope 1 requires no server, account, or network upload.
 
@@ -20,7 +20,32 @@ The local cache preserves UUIDs, start/end times, source app identifiers and ver
 
 The Watch sends heart rate, its measurement timestamp, workout state, and active elapsed time through HealthKit workout mirroring. A five-second status heartbeat describes session connectivity; it does not control sensor sampling. Both screens mark measurements older than 30 seconds as stale. iPhone marks an active connection delayed after 15 seconds without a session update. After disconnection, select **Reconnect iPhone** on Watch while recording continues locally.
 
-The two target copies of `WorkoutSnapshot.swift` define the same wire format and must be updated together. No live HRV or cloud synchronization is implemented.
+The two target copies of `WorkoutSnapshot.swift` define the same wire format and must be updated together. No live HRV is implemented.
+
+## Optional cloud publishing (Scope 2)
+
+Deploy the backend and public dashboard using the root `infra/README.md` first. In iPhone
+Settings, enter the HTTPS base URL (default `https://beatavue.web.app`) and the private upload
+token. Save the connection and explicitly confirm **Enable public publishing**. This imports
+the last 30 calendar days and future heart-rate/HRV changes. Anyone can view published data;
+Health permission alone does not opt in. Older publication requires the separate date/import action.
+
+`CloudSync` registers HealthKit observers at launch for an enabled import, uses fixed-window
+anchored queries, and persists anchors plus immutable upload batches in one atomic protected
+file excluded from backups. It uses file-backed background URLSession uploads, reconnects on
+background relaunch, and removes batches only on a matching server acknowledgment. Tokens
+are stored in device-only Keychain, never in the JSON queue. Temporary failures retain data and
+retry with exponential backoff and jitter. Locked-device access failures catch up on foreground
+entry or **Sync now**. Background delivery remains best effort and needs physical-device validation.
+
+**Pause publishing** retains the queue but leaves cloud history public. **Delete cloud history**
+disables publishing and clears pending local uploads before asking the server to fence and purge
+the generation. Tap it again to check deletion completion or retry a failed request; a new import
+is disabled until deletion finishes. Changing the endpoint resets local queue/anchors and requires
+new opt-in; rotating the token at the same endpoint preserves history and pending batches.
+**Reset local sync** is a recovery action for an externally replaced server dataset. It discards
+pending uploads and anchors and requires fresh opt-in, while leaving existing cloud history visible.
+Local History and Watch workouts continue working without cloud connectivity.
 
 ## Verification
 
