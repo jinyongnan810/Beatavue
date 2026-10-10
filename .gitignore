@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+.pytest_cache/
+node_modules/
+web/dist/
+infra/.terraform/
+*.tfstate*
+*.tfplan
+infra/terraform.tfvars
+.env*
+!.env.example
+.firebase/
+build/
+*.tsbuildinfo
+gha-creds-*.json
+.DS_Store

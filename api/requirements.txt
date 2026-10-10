@@ -1,0 +1,4 @@
+functions-framework==3.10.2
+google-cloud-firestore==2.34.1
+google-cloud-tasks==2.26.0
+pydantic==2.14.0
