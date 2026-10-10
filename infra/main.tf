@@ -10,6 +10,7 @@ data "google_project" "current" {
 
 locals {
   apis = toset([
+    "cloudresourcemanager.googleapis.com", "cloudbilling.googleapis.com",
     "cloudfunctions.googleapis.com", "run.googleapis.com", "cloudbuild.googleapis.com",
     "artifactregistry.googleapis.com", "firestore.googleapis.com", "secretmanager.googleapis.com",
     "cloudtasks.googleapis.com", "firebase.googleapis.com", "firebasehosting.googleapis.com",
@@ -26,18 +27,22 @@ resource "google_project_service" "apis" {
 resource "google_service_account" "api" {
   account_id   = "beatavue-api"
   display_name = "Beatavue HTTP API"
+  depends_on   = [google_project_service.apis]
 }
 resource "google_service_account" "worker" {
   account_id   = "beatavue-cleanup"
   display_name = "Beatavue deletion worker"
+  depends_on   = [google_project_service.apis]
 }
 resource "google_service_account" "tasks" {
   account_id   = "beatavue-tasks"
   display_name = "Beatavue task invoker"
+  depends_on   = [google_project_service.apis]
 }
 resource "google_service_account" "builder" {
   account_id   = "beatavue-builder"
   display_name = "Beatavue function builds"
+  depends_on   = [google_project_service.apis]
 }
 resource "google_project_iam_member" "database" {
   project  = var.project_id
