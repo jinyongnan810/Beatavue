@@ -64,35 +64,35 @@ sequenceDiagram
 
 ### 収集と保存
 
-1. **公開には明示的な有効化が必要。** 固定のインポートIDを保存し、`/v1/import`を呼び、返された世代を保存する。初期範囲は今日の29日前から始まり、今日と今後のサンプルを含む。世代は公開単位を表し、削除済みの世代からの送信をサーバーが拒否するために使う。[enable()](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:305)、[世代の検証](/Users/kin/Documents/GitHub/Beatavue/api/repository.py:61)。
-2. **変更通知で収集する。** 測定種別ごとに監視クエリを登録し、`.immediate`のバックグラウンド通知を要求する。通知時は`syncNow()`で収集し、HTTP応答を待たずにコールバックを完了する。アプリを開いたときも未取得分を収集する。[HealthKit監視](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:426)、[フォアグラウンドでの収集](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/ContentView.swift:41)。
-3. **アンカーは取得位置のしおり。** 測定種別と固定インポート範囲ごとにアンカーを持ち、前回以降の追加・削除を100件ずつ取得する。追加は`upsert`、削除は`delete`に変換。同じページで同一UUIDの追加と削除があれば削除を優先する。[アンカー付き取得](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:469)。
-4. **しおりを進める前に保存する。** 最大100操作のバッチに分割し、それぞれ固定IDを付ける。バッチと新アンカーを同じファイルの原子的な置換で保存し、変更を失ったままアンカーだけが進むことを防ぐ。メモリー上の状態も書き込み成功後に更新する。[バッチとアンカーの更新](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:485)、[原子的な保存](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:279)。
+1. **公開には明示的な有効化が必要。** 固定のインポートIDを保存し、`/v1/import`を呼び、返された世代を保存する。初期範囲は今日の29日前から始まり、今日と今後のサンプルを含む。世代は公開単位を表し、削除済みの世代からの送信をサーバーが拒否するために使う。[enable()](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L305)、[世代の検証](api/repository.py#L61)。
+2. **変更通知で収集する。** 測定種別ごとに監視クエリを登録し、`.immediate`のバックグラウンド通知を要求する。通知時は`syncNow()`で収集し、HTTP応答を待たずにコールバックを完了する。アプリを開いたときも未取得分を収集する。[HealthKit監視](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L426)、[フォアグラウンドでの収集](mobile/ios/Beatavue/Beatavue/ContentView.swift#L41)。
+3. **アンカーは取得位置のしおり。** 測定種別と固定インポート範囲ごとにアンカーを持ち、前回以降の追加・削除を100件ずつ取得する。追加は`upsert`、削除は`delete`に変換。同じページで同一UUIDの追加と削除があれば削除を優先する。[アンカー付き取得](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L469)。
+4. **しおりを進める前に保存する。** 最大100操作のバッチに分割し、それぞれ固定IDを付ける。バッチと新アンカーを同じファイルの原子的な置換で保存し、変更を失ったままアンカーだけが進むことを防ぐ。メモリー上の状態も書き込み成功後に更新する。[バッチとアンカーの更新](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L485)、[原子的な保存](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L279)。
 
 ### ファイル転送の登録
 
-先頭のバッチから順番に、1つの転送を実行する。JSON化して256 KiB以内かを確認し、Keychainのトークンを読み、`POST /v1/sync`のファイル送信タスクを作る。タスクの説明文字列で各試行と固定バッチIDを対応付ける。[送信スケジューラー](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:506)。
+先頭のバッチから順番に、1つの転送を実行する。JSON化して256 KiB以内かを確認し、Keychainのトークンを読み、`POST /v1/sync`のファイル送信タスクを作る。タスクの説明文字列で各試行と固定バッチIDを対応付ける。[送信スケジューラー](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L506)。
 
-セッションは固定識別子を使い、バックグラウンド起動イベントを要求し、接続が戻るまで待つ。リソースのタイムアウトは24時間、リクエストは60秒。これらは設定値であり、配信時刻の保証ではない。[バックグラウンドセッション設定](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:146)。
+セッションは固定識別子を使い、バックグラウンド起動イベントを要求し、接続が戻るまで待つ。リソースのタイムアウトは24時間、リクエストは60秒。これらは設定値であり、配信時刻の保証ではない。[バックグラウンドセッション設定](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L146)。
 
 | ファイル | 保護 | 用途 |
 | --- | --- | --- |
 | `state.json` | `.completeFileProtection` | 永続キューとアンカー。ロック中は保護する。 |
 | `upload-<バッチID>.json` | `.completeFileProtectionUntilFirstUserAuthentication` | 起動後の初回ロック解除後は、ロック中も転送サービスが準備済みコピーを開けるようにする。 |
 
-保護を緩めるのは一時送信用コピーだけ。フォルダーはバックアップから除外し、受領確認が一致するとコピーを削除する。ロック中に永続キューの読み込みや保存ができなければ、未完了の処理を後で再試行する。ロック解除してアプリを開くと追いつける。[バックアップ除外](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:267)、[送信ファイルの保護](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:513)、[受領確認の保存失敗](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:569)。
+保護を緩めるのは一時送信用コピーだけ。フォルダーはバックアップから除外し、受領確認が一致するとコピーを削除する。ロック中に永続キューの読み込みや保存ができなければ、未完了の処理を後で再試行する。ロック解除してアプリを開くと追いつける。[バックアップ除外](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L267)、[送信ファイルの保護](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L513)、[受領確認の保存失敗](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L569)。
 
 ### 完了、再試行、再接続
 
-**受領確認は対象バッチと一致する必要がある。** 転送エラーなし、HTTP 200、`batch_id`・`generation`・`acknowledged`が待機中のバッチと一致した場合だけ削除する。更新したキューを保存してから一時ファイルを削除し、次のバッチを送る。[受領確認の検証](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:529)。
+**受領確認は対象バッチと一致する必要がある。** 転送エラーなし、HTTP 200、`batch_id`・`generation`・`acknowledged`が待機中のバッチと一致した場合だけ削除する。更新したキューを保存してから一時ファイルを削除し、次のバッチを送る。[受領確認の検証](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L529)。
 
-**同じバッチの再送は安全。** Firestoreはサンプル変更と受領記録を1つのトランザクションで確定する。記録には検証済みペイロードのハッシュと応答を保存する。確定後に応答が失われても、同じ内容の再送には保存済み応答を返す。同じIDで内容を変えると409。削除済みの印で、遅れた追加による復活も防ぐ。[ペイロードのハッシュ](/Users/kin/Documents/GitHub/Beatavue/api/main.py:140)、[トランザクションと受領記録](/Users/kin/Documents/GitHub/Beatavue/api/repository.py:55)。
+**同じバッチの再送は安全。** Firestoreはサンプル変更と受領記録を1つのトランザクションで確定する。記録には検証済みペイロードのハッシュと応答を保存する。確定後に応答が失われても、同じ内容の再送には保存済み応答を返す。同じIDで内容を変えると409。削除済みの印で、遅れた追加による復活も防ぐ。[ペイロードのハッシュ](api/main.py#L140)、[トランザクションと受領記録](api/repository.py#L55)。
 
-**一時的な失敗でもキューを保持する。** 遅延は10秒から倍増し、最大1時間に0〜10秒のランダムな遅延を加える。保存した`retryAt`を次のタスクの開始可能時刻に設定する。400・401・409・413ではバッチを保持してエラーを表示し、その完了処理から次の試行を自動登録しない。原因を修正して「今すぐ同期」を使う。[再試行処理](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:552)、[開始可能時刻](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:523)。
+**一時的な失敗でもキューを保持する。** 遅延は10秒から倍増し、最大1時間に0〜10秒のランダムな遅延を加える。保存した`retryAt`を次のタスクの開始可能時刻に設定する。400・401・409・413ではバッチを保持してエラーを表示し、その完了処理から次の試行を自動登録しない。原因を修正して「今すぐ同期」を使う。[再試行処理](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L552)、[開始可能時刻](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L523)。
 
-**再起動時は既存タスクに再接続する。** キューを読み、バックグラウンドタスクを列挙する。先頭バッチに対応するタスクを引き継ぎ、他を取り消してから追加の送信を登録する。iOSからバックグラウンドイベントが届くとアプリデリゲートがセッションを再接続し、イベント配信完了後にシステムの完了ハンドラーを呼ぶ。[タスク復元](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:237)、[アプリデリゲート](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:592)、[イベント完了](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:213)。
+**再起動時は既存タスクに再接続する。** キューを読み、バックグラウンドタスクを列挙する。先頭バッチに対応するタスクを引き継ぎ、他を取り消してから追加の送信を登録する。iOSからバックグラウンドイベントが届くとアプリデリゲートがセッションを再接続し、イベント配信完了後にシステムの完了ハンドラーを呼ぶ。[タスク復元](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L237)、[アプリデリゲート](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L592)、[イベント完了](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L213)。
 
-一時停止ではキューとアンカーを残し、収集と転送を取り消す。旧形式の時刻だけを含むバッチはアンカーを消して追加分をHealthKitから再取得し、待機中の削除は残す。[一時停止](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:335)、[旧形式の復旧](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:74)。実機のバックグラウンド動作は引き続き検証が必要。
+一時停止ではキューとアンカーを残し、収集と転送を取り消す。旧形式の時刻だけを含むバッチはアンカーを消して追加分をHealthKitから再取得し、待機中の削除は残す。[一時停止](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L335)、[旧形式の復旧](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L74)。実機のバックグラウンド動作は引き続き検証が必要。
 
 ## 認証
 
@@ -112,23 +112,23 @@ flowchart LR
 
 ### 所有者トークン：iPhoneからAPIへ
 
-所有者がHTTPSのベースURLと共通のアップロードトークンを設定する。iPhoneはヘルスデータと分離し、Keychainの汎用パスワード（`com.kinn.Beatavue.cloud` / `upload-token`）として保存する。`AfterFirstUnlockThisDeviceOnly`により起動後の初回ロック解除後に利用でき、この端末専用になる。アプリは32文字以上を要求する。[URLの検証](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:285)、[Keychain保存](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:98)。初期設定で使うmacOS Keychainのコピーとは別で、iPhoneは自身のKeychain項目を読む。
+所有者がHTTPSのベースURLと共通のアップロードトークンを設定する。iPhoneはヘルスデータと分離し、Keychainの汎用パスワード（`com.kinn.Beatavue.cloud` / `upload-token`）として保存する。`AfterFirstUnlockThisDeviceOnly`により起動後の初回ロック解除後に利用でき、この端末専用になる。アプリは32文字以上を要求する。[URLの検証](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L285)、[Keychain保存](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L98)。初期設定で使うmacOS Keychainのコピーとは別で、iPhoneは自身のKeychain項目を読む。
 
-アップロードは`Authorization: Bearer <token>`を送る。インポートと削除の制御リクエストも一時セッションで同じヘッダーを使う。両経路ともHTTPリダイレクトを拒否し、設定先がトークン付きリクエストを別の宛先に転送することを防ぐ。[送信ヘッダー](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:519)、[制御リクエスト](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:572)、[リダイレクト拒否](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:178)。
+アップロードは`Authorization: Bearer <token>`を送る。インポートと削除の制御リクエストも一時セッションで同じヘッダーを使う。両経路ともHTTPリダイレクトを拒否し、設定先がトークン付きリクエストを別の宛先に転送することを防ぐ。[送信ヘッダー](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L519)、[制御リクエスト](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L572)、[リダイレクト拒否](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L178)。
 
-GCPではAPI用サービスアカウントにSecret Managerの読み取り権限を付け、指定バージョンを`UPLOAD_TOKEN`として注入する。Terraformは参照先とバージョンを保持し、値は別途登録する。[シークレット読取権限](/Users/kin/Documents/GitHub/Beatavue/infra/main.tf:97)、[シークレット注入](/Users/kin/Documents/GitHub/Beatavue/infra/main.tf:245)。
+GCPではAPI用サービスアカウントにSecret Managerの読み取り権限を付け、指定バージョンを`UPLOAD_TOKEN`として注入する。Terraformは参照先とバージョンを保持し、値は別途登録する。[シークレット読取権限](infra/main.tf#L97)、[シークレット注入](infra/main.tf#L245)。
 
-APIは**処理ハンドラーを実行する前に**、`POST /v1/import`・`POST /v1/sync`・`DELETE /v1/data`を検証する。Bearerヘッダー全体を`hmac.compare_digest`で設定値と比較する。未指定、不一致、サーバー設定値が32文字未満の場合は401。[トークン比較](/Users/kin/Documents/GitHub/Beatavue/api/main.py:36)、[ルートの認証](/Users/kin/Documents/GitHub/Beatavue/api/main.py:133)。
+APIは**処理ハンドラーを実行する前に**、`POST /v1/import`・`POST /v1/sync`・`DELETE /v1/data`を検証する。Bearerヘッダー全体を`hmac.compare_digest`で設定値と比較する。未指定、不一致、サーバー設定値が32文字未満の場合は401。[トークン比較](api/main.py#L36)、[ルートの認証](api/main.py#L133)。
 
 固定の共通シークレットであり、ログイン、更新用トークン、自動失効はない。更新時は新しいシークレットバージョンの作成、そのバージョンを使うデプロイ、iPhoneのトークン更新が必要。[セットアップ](setup-jp.md)を参照。
 
 ### 公開取得と内部ID
 
-**公開閲覧：** Cloud RunはAPI関数の呼び出しを`allUsers`に許可し、Pythonのルート認証までリクエストを通す。対応するGETルートはトークン不要。公開サンプルからUUID、端末情報、非公開のソース識別子を除く。URLが分かれば公開測定値を閲覧できる。[公開APIのIAM](/Users/kin/Documents/GitHub/Beatavue/infra/main.tf:257)、[公開ルート](/Users/kin/Documents/GitHub/Beatavue/api/main.py:150)、[公開サンプルの項目](/Users/kin/Documents/GitHub/Beatavue/api/main.py:69)。
+**公開閲覧：** Cloud RunはAPI関数の呼び出しを`allUsers`に許可し、Pythonのルート認証までリクエストを通す。対応するGETルートはトークン不要。公開サンプルからUUID、端末情報、非公開のソース識別子を除く。URLが分かれば公開測定値を閲覧できる。[公開APIのIAM](infra/main.tf#L257)、[公開ルート](api/main.py#L150)、[公開サンプルの項目](api/main.py#L69)。
 
-**削除処理：** APIは`beatavue-tasks`のOIDC IDトークンと、削除関数URLを対象（audience）に指定したCloud Taskを登録する。実行前にCloud Run IAMがIDを検証し、Terraformがこのアカウントに呼び出し権限を付ける。所有者トークンは削除関数の認証情報として使わない。[OIDC付きタスク](/Users/kin/Documents/GitHub/Beatavue/api/main.py:93)、[タスクIDの使用権限](/Users/kin/Documents/GitHub/Beatavue/infra/main.tf:166)、[削除関数の呼出権限](/Users/kin/Documents/GitHub/Beatavue/infra/main.tf:208)。
+**削除処理：** APIは`beatavue-tasks`のOIDC IDトークンと、削除関数URLを対象（audience）に指定したCloud Taskを登録する。実行前にCloud Run IAMがIDを検証し、Terraformがこのアカウントに呼び出し権限を付ける。所有者トークンは削除関数の認証情報として使わない。[OIDC付きタスク](api/main.py#L93)、[タスクIDの使用権限](infra/main.tf#L166)、[削除関数の呼出権限](infra/main.tf#L208)。
 
-**データベース：** APIと削除関数は実行用サービスアカウントと`roles/datastore.user`を使う。ブラウザーとiPhoneはAPI経由でアクセスし、Firestoreルールはクライアントの直接読み書きを拒否する。クライアント向けルールとサーバーIAMは別で、サーバーSDKはIAMで認可される。[DBのIAM](/Users/kin/Documents/GitHub/Beatavue/infra/main.tf:47)、[サーバーSDKクライアント](/Users/kin/Documents/GitHub/Beatavue/api/repository.py:23)、[直接アクセス拒否ルール](/Users/kin/Documents/GitHub/Beatavue/infra/firestore.rules:4)。Firebase Authenticationは使わない。
+**データベース：** APIと削除関数は実行用サービスアカウントと`roles/datastore.user`を使う。ブラウザーとiPhoneはAPI経由でアクセスし、Firestoreルールはクライアントの直接読み書きを拒否する。クライアント向けルールとサーバーIAMは別で、サーバーSDKはIAMで認可される。[DBのIAM](infra/main.tf#L47)、[サーバーSDKクライアント](api/repository.py#L23)、[直接アクセス拒否ルール](infra/firestore.rules#L4)。Firebase Authenticationは使わない。
 
 ## API
 
