@@ -14,26 +14,32 @@ class RateLimited(Exception):
     pass
 
 
+# Hash the sample UUID so document IDs do not expose it in public cursors.
 def document_id(uuid):
     # Cursor document IDs cannot disclose the original HealthKit UUID.
     return hashlib.sha256(str(uuid).lower().encode()).hexdigest()
 
 
 class Repository:
+    # Connect to Firestore and select the single server-owned dataset.
     def __init__(self, client=None):
         self.db = client or firestore.Client()
         self.owner = self.db.collection("datasets").document("owner")
 
+    # Read the current publication state, generation, and cleanup status.
     def status(self):
         return self.owner.get().to_dict() or {}
 
+    # Locate the sample collection belonging to a publication generation.
     def samples(self, generation):
         return self.owner.collection("generations").document(str(generation)).collection("samples")
 
+    # Start or reuse an import while rejecting cleanup and retired generations.
     def begin_import(self, import_id):
         generation = str(import_id)
         marker = self.owner.collection("generations").document(generation)
 
+        # Atomically activate the import and record its generation marker.
         @firestore.transactional
         def commit(tx):
             state = self.owner.get(transaction=tx).to_dict() or {}
@@ -52,10 +58,12 @@ class Repository:
 
         return commit(self.db.transaction())
 
+    # Apply a generation-scoped batch with a durable receipt for safe retries.
     def sync(self, batch, digest):
         generation = str(batch.generation)
         receipt = self.owner.collection("generations").document(generation).collection("batches").document(str(batch.batch_id))
 
+        # Atomically validate the batch, apply operations, and save its acknowledgment.
         @firestore.transactional
         def commit(tx):
             state = self.owner.get(transaction=tx).to_dict() or {}
@@ -85,10 +93,12 @@ class Repository:
 
         return commit(self.db.transaction())
 
+    # Fence the generation and reuse the deletion ID across repeated requests.
     def begin_delete(self, request):
         generation = str(request.generation)
         deletion_id = str(request.deletion_id)
 
+        # Atomically hide the dataset and mark its generation as retired.
         @firestore.transactional
         def commit(tx):
             state = self.owner.get(transaction=tx).to_dict() or {}
@@ -107,11 +117,13 @@ class Repository:
 
         return commit(self.db.transaction())
 
+    # Reserve request and sample-read capacity from the shared minute allowance.
     def reserve_public_reads(self, maximum_reads):
         """Shared demo-wide allowance; it cannot be bypassed by changing an IP header."""
         ref = self.db.collection("api_limits").document("public")
         minute = int(datetime.now(timezone.utc).timestamp()) // 60
 
+        # Atomically reset or debit the current minute allowance without exceeding limits.
         @firestore.transactional
         def reserve(tx):
             budget = ref.get(transaction=tx).to_dict() or {}
@@ -125,6 +137,7 @@ class Repository:
 
         reserve(self.db.transaction())
 
+    # Delete at most 200 samples or receipts, then finish cleanup when empty.
     def cleanup_chunk(self, generation):
         state = self.status()
         if state.get("generation") != generation or state.get("enabled") or not state.get("cleanup_pending"):
@@ -139,6 +152,7 @@ class Repository:
                 batch.commit()
                 return False
 
+        # Clear pending cleanup only if the same generation is still disabled.
         @firestore.transactional
         def finish(tx):
             current = self.owner.get(transaction=tx).to_dict() or {}
@@ -147,6 +161,7 @@ class Repository:
         finish(self.db.transaction())
         return True
 
+    # Fetch a bounded page of visible samples ordered by timestamp and document ID.
     def query(self, state, metric, start, end, limit, after=None):
         if not state.get("enabled"):
             return []

@@ -23,6 +23,7 @@ class Sample(Model):
     device_name: str | None = Field(default=None, max_length=256)
     device_model: str | None = Field(default=None, max_length=256)
 
+    # Require timezone information and normalize sample timestamps to UTC.
     @field_validator("start", "end")
     @classmethod
     def utc(cls, value):
@@ -30,6 +31,7 @@ class Sample(Model):
             raise ValueError("Timezone required")
         return value.astimezone(timezone.utc)
 
+    # Ensure the unit matches the metric and timestamps are ordered.
     @model_validator(mode="after")
     def consistent(self):
         if self.unit != {"heart_rate": "bpm", "hrv_sdnn": "ms"}[self.metric]:
@@ -44,6 +46,7 @@ class Operation(Model):
     uuid: UUID
     sample: Sample | None = None
 
+    # Require matching sample data for additions and no sample data for deletions.
     @model_validator(mode="after")
     def consistent(self):
         if self.kind == "upsert" and (self.sample is None or self.sample.uuid != self.uuid):
@@ -59,6 +62,7 @@ class SyncBatch(Model):
     batch_id: UUID
     operations: list[Operation] = Field(min_length=1, max_length=100)
 
+    # Reject multiple operations for the same sample UUID in one batch.
     @model_validator(mode="after")
     def unique(self):
         ids = [op.uuid for op in self.operations]

@@ -22,23 +22,27 @@ MAX_BODY = 256 * 1024
 MAX_SUMMARY_SAMPLES = 20000
 
 
+# Reuse one Firestore repository across requests in this function instance.
 @lru_cache
 def repository():
     return Repository()
 
 
+# Return a JSON response with cache and content-type safety headers.
 def response(body, status=200, cache=False):
     return json.dumps(body), status, {"Content-Type": "application/json",
                                     "Cache-Control": "public, max-age=60" if cache else "no-store",
                                     "X-Content-Type-Options": "nosniff"}
 
 
+# Check the owner Bearer token using a constant-time comparison.
 def authorized(request):
     token = os.environ.get("UPLOAD_TOKEN", "")
     supplied = request.headers.get("Authorization", "")
     return len(token) >= 32 and hmac.compare_digest(supplied.encode(), ("Bearer " + token).encode())
 
 
+# Validate a size-limited JSON request against its wire-contract model.
 def body(request, model):
     if request.mimetype != "application/json":
         raise ValueError("Use application/json")
@@ -48,6 +52,7 @@ def body(request, model):
     return model.model_validate_json(raw)
 
 
+# Parse a timezone-aware timestamp and normalize it to UTC.
 def instant(value):
     result = datetime.fromisoformat(value.replace("Z", "+00:00"))
     if result.tzinfo is None:
@@ -55,6 +60,7 @@ def instant(value):
     return result.astimezone(timezone.utc)
 
 
+# Validate the requested metric and bounded sample time range.
 def parameters(request):
     metric = request.args["metric"]
     if metric not in ("heart_rate", "hrv_sdnn"):
@@ -66,17 +72,20 @@ def parameters(request):
     return metric, start, end
 
 
+# Expose measurement fields without private sample or device identifiers.
 def public_sample(data):
     return {"value": data["value"], "unit": data["unit"], "start": data["start"].isoformat(),
             "end": data["end"].isoformat(), "source": "Apple Health"}
 
 
+# Encode the generation, query, and last sample position for pagination.
 def cursor_encode(state, metric, start, end, doc):
     payload = [state["generation"], metric, start.isoformat(), end.isoformat(),
                doc.to_dict()["start"].isoformat(), doc.id]
     return base64.urlsafe_b64encode(json.dumps(payload).encode()).decode()
 
 
+# Validate a pagination cursor against the active generation and query.
 def cursor_decode(cursor, state, metric, start, end):
     if len(cursor) > 1024:
         raise ValueError("Invalid cursor")
@@ -90,6 +99,7 @@ def cursor_decode(cursor, state, metric, start, end):
     return stamp, value[5]
 
 
+# Schedule an idempotent cleanup task authenticated with the task identity.
 def enqueue_cleanup(state):
     client = tasks_v2.CloudTasksClient()
     queue = client.queue_path(os.environ["GOOGLE_CLOUD_PROJECT"], os.environ["REGION"], "beatavue-cleanup")
@@ -105,12 +115,14 @@ def enqueue_cleanup(state):
         pass
 
 
+# Compute sample count, bounds, and an equally weighted average.
 def stats(values):
     return {"count": len(values), "min": min(values) if values else None,
             "max": max(values) if values else None,
             "average": sum(values) / len(values) if values else None}
 
 
+# Group measurements into UTC hours or local calendar days.
 def summaries(docs, zone, bucket):
     groups = {}
     for doc in docs:
@@ -125,6 +137,7 @@ def summaries(docs, zone, bucket):
     return [{"start": key.isoformat(), **stats(values)} for key, values in sorted(groups.items())]
 
 
+# Route public reads and authenticated owner changes to the dataset repository.
 @functions_framework.http
 def api(request):
     if request.content_length and request.content_length > MAX_BODY:
@@ -198,6 +211,7 @@ def api(request):
         return response({"error": "temporarily_unavailable"}, 503)
 
 
+# Purge the requested generation in chunks until complete or ready for retry.
 @functions_framework.http
 def cleanup(request):
     # Cloud Run IAM admits only the task service account; this endpoint is a separate function.

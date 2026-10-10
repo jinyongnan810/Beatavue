@@ -45,8 +45,8 @@ flowchart LR
 
 | 用語 | 意味 | 役割 | コード |
 | --- | --- | --- | --- |
-| **Generation（世代）** | クラウド公開の1サイクルを識別するID。バッチはこの世代に属する。一時停止と再開では維持し、クラウド削除後の新しいインポートでは新しい世代を使う。 | サーバーが古い世代の送信を拒否し、遅れた転送による削除済み履歴の復活を防ぐ。 | [世代の検証](api/repository.py#L61) |
-| **Batch（バッチ）** | 最大100件のサンプル追加・削除をまとめた、内容が変わらない送信単位。固定の`batch_id`と世代を持つ。 | 再送時も同じIDを使い、サーバーが処理済みと判定して保存済みの受領確認を返せるようにする。 | [バッチ形式](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L43)、[受領記録](api/repository.py#L64) |
+| **Generation（世代）** | クラウド公開の1サイクルを識別するID。バッチはこの世代に属する。一時停止と再開では維持し、クラウド削除後の新しいインポートでは新しい世代を使う。 | サーバーが古い世代の送信を拒否し、遅れた転送による削除済み履歴の復活を防ぐ。 | [世代の検証](api/repository.py#L69) |
+| **Batch（バッチ）** | 最大100件のサンプル追加・削除をまとめた、内容が変わらない送信単位。固定の`batch_id`と世代を持つ。 | 再送時も同じIDを使い、サーバーが処理済みと判定して保存済みの受領確認を返せるようにする。 | [バッチ形式](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L43)、[受領記録](api/repository.py#L72) |
 | **Anchor（アンカー）** | HealthKitからどこまで収集したかを示すしおり。測定種別と固定インポート範囲ごとに保存する。送信成功ではなく収集の進捗を表す。 | 次のクエリでしおり以降の変更を取得する。待機中の変更と一緒に保存し、変更の取りこぼしを防ぐ。 | [アンカー読取](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L469)、[アンカー保存](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L491) |
 | **Queue（キュー）** | 一致するサーバー受領確認を待つバッチの順序付きリスト。iPhoneの`state.json`に保存し、先頭から送る。 | アプリ再起動や転送失敗でも未完了の変更を保持する。削除処理用のGCP Cloud Tasksキューとは別。 | [保存するバッチ](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L67)、[送信登録](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L506) |
 
@@ -73,7 +73,7 @@ sequenceDiagram
 
 ### 収集と保存
 
-1. **公開には明示的な有効化が必要。** 固定のインポートIDを保存し、`/v1/import`を呼び、返された世代を保存する。初期範囲は今日の29日前から始まり、今日と今後のサンプルを含む。世代は公開単位を表し、削除済みの世代からの送信をサーバーが拒否するために使う。[enable()](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L305)、[世代の検証](api/repository.py#L61)。
+1. **公開には明示的な有効化が必要。** 固定のインポートIDを保存し、`/v1/import`を呼び、返された世代を保存する。初期範囲は今日の29日前から始まり、今日と今後のサンプルを含む。世代は公開単位を表し、削除済みの世代からの送信をサーバーが拒否するために使う。[enable()](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L305)、[世代の検証](api/repository.py#L69)。
 2. **変更通知で収集する。** 測定種別ごとに監視クエリを登録し、`.immediate`のバックグラウンド通知を要求する。通知時は`syncNow()`で収集し、HTTP応答を待たずにコールバックを完了する。アプリを開いたときも未取得分を収集する。[HealthKit監視](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L426)、[フォアグラウンドでの収集](mobile/ios/Beatavue/Beatavue/ContentView.swift#L41)。
 3. **アンカーは取得位置のしおり。** 測定種別と固定インポート範囲ごとにアンカーを持ち、前回以降の追加・削除を100件ずつ取得する。追加は`upsert`、削除は`delete`に変換。同じページで同一UUIDの追加と削除があれば削除を優先する。[アンカー付き取得](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L469)。
 4. **しおりを進める前に保存する。** 最大100操作のバッチに分割し、それぞれ固定IDを付ける。バッチと新アンカーを同じファイルの原子的な置換で保存し、変更を失ったままアンカーだけが進むことを防ぐ。メモリー上の状態も書き込み成功後に更新する。[バッチとアンカーの更新](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L485)、[原子的な保存](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L279)。
@@ -95,7 +95,7 @@ sequenceDiagram
 
 **受領確認は対象バッチと一致する必要がある。** 転送エラーなし、HTTP 200、`batch_id`・`generation`・`acknowledged`が待機中のバッチと一致した場合だけ削除する。更新したキューを保存してから一時ファイルを削除し、次のバッチを送る。[受領確認の検証](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L529)。
 
-**同じバッチの再送は安全。** Firestoreはサンプル変更と受領記録を1つのトランザクションで確定する。記録には検証済みペイロードのハッシュと応答を保存する。確定後に応答が失われても、同じ内容の再送には保存済み応答を返す。同じIDで内容を変えると409。削除済みの印で、遅れた追加による復活も防ぐ。[ペイロードのハッシュ](api/main.py#L140)、[トランザクションと受領記録](api/repository.py#L55)。
+**同じバッチの再送は安全。** Firestoreはサンプル変更と受領記録を1つのトランザクションで確定する。記録には検証済みペイロードのハッシュと応答を保存する。確定後に応答が失われても、同じ内容の再送には保存済み応答を返す。同じIDで内容を変えると409。削除済みの印で、遅れた追加による復活も防ぐ。[ペイロードのハッシュ](api/main.py#L153)、[トランザクションと受領記録](api/repository.py#L62)。
 
 **一時的な失敗でもキューを保持する。** 遅延は10秒から倍増し、最大1時間に0〜10秒のランダムな遅延を加える。保存した`retryAt`を次のタスクの開始可能時刻に設定する。400・401・409・413ではバッチを保持してエラーを表示し、その完了処理から次の試行を自動登録しない。原因を修正して「今すぐ同期」を使う。[再試行処理](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L552)、[開始可能時刻](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L523)。
 
@@ -127,17 +127,17 @@ flowchart LR
 
 GCPではAPI用サービスアカウントにSecret Managerの読み取り権限を付け、指定バージョンを`UPLOAD_TOKEN`として注入する。Terraformは参照先とバージョンを保持し、値は別途登録する。[シークレット読取権限](infra/main.tf#L97)、[シークレット注入](infra/main.tf#L245)。
 
-APIは**処理ハンドラーを実行する前に**、`POST /v1/import`・`POST /v1/sync`・`DELETE /v1/data`を検証する。Bearerヘッダー全体を`hmac.compare_digest`で設定値と比較する。未指定、不一致、サーバー設定値が32文字未満の場合は401。[トークン比較](api/main.py#L36)、[ルートの認証](api/main.py#L133)。
+APIは**処理ハンドラーを実行する前に**、`POST /v1/import`・`POST /v1/sync`・`DELETE /v1/data`を検証する。Bearerヘッダー全体を`hmac.compare_digest`で設定値と比較する。未指定、不一致、サーバー設定値が32文字未満の場合は401。[トークン比較](api/main.py#L39)、[ルートの認証](api/main.py#L146)。
 
 固定の共通シークレットであり、ログイン、更新用トークン、自動失効はない。更新時は新しいシークレットバージョンの作成、そのバージョンを使うデプロイ、iPhoneのトークン更新が必要。[セットアップ](setup-jp.md)を参照。
 
 ### 公開取得と内部ID
 
-**公開閲覧：** Cloud RunはAPI関数の呼び出しを`allUsers`に許可し、Pythonのルート認証までリクエストを通す。対応するGETルートはトークン不要。公開サンプルからUUID、端末情報、非公開のソース識別子を除く。URLが分かれば公開測定値を閲覧できる。[公開APIのIAM](infra/main.tf#L257)、[公開ルート](api/main.py#L150)、[公開サンプルの項目](api/main.py#L69)。
+**公開閲覧：** Cloud RunはAPI関数の呼び出しを`allUsers`に許可し、Pythonのルート認証までリクエストを通す。対応するGETルートはトークン不要。公開サンプルからUUID、端末情報、非公開のソース識別子を除く。URLが分かれば公開測定値を閲覧できる。[公開APIのIAM](infra/main.tf#L257)、[公開ルート](api/main.py#L163)、[公開サンプルの項目](api/main.py#L76)。
 
-**削除処理：** APIは`beatavue-tasks`のOIDC IDトークンと、削除関数URLを対象（audience）に指定したCloud Taskを登録する。実行前にCloud Run IAMがIDを検証し、Terraformがこのアカウントに呼び出し権限を付ける。所有者トークンは削除関数の認証情報として使わない。[OIDC付きタスク](api/main.py#L93)、[タスクIDの使用権限](infra/main.tf#L166)、[削除関数の呼出権限](infra/main.tf#L208)。
+**削除処理：** APIは`beatavue-tasks`のOIDC IDトークンと、削除関数URLを対象（audience）に指定したCloud Taskを登録する。実行前にCloud Run IAMがIDを検証し、Terraformがこのアカウントに呼び出し権限を付ける。所有者トークンは削除関数の認証情報として使わない。[OIDC付きタスク](api/main.py#L103)、[タスクIDの使用権限](infra/main.tf#L166)、[削除関数の呼出権限](infra/main.tf#L208)。
 
-**データベース：** APIと削除関数は実行用サービスアカウントと`roles/datastore.user`を使う。ブラウザーとiPhoneはAPI経由でアクセスし、Firestoreルールはクライアントの直接読み書きを拒否する。クライアント向けルールとサーバーIAMは別で、サーバーSDKはIAMで認可される。[DBのIAM](infra/main.tf#L47)、[サーバーSDKクライアント](api/repository.py#L23)、[直接アクセス拒否ルール](infra/firestore.rules#L4)。Firebase Authenticationは使わない。
+**データベース：** APIと削除関数は実行用サービスアカウントと`roles/datastore.user`を使う。ブラウザーとiPhoneはAPI経由でアクセスし、Firestoreルールはクライアントの直接読み書きを拒否する。クライアント向けルールとサーバーIAMは別で、サーバーSDKはIAMで認可される。[DBのIAM](infra/main.tf#L47)、[サーバーSDKクライアント](api/repository.py#L25)、[直接アクセス拒否ルール](infra/firestore.rules#L4)。Firebase Authenticationは使わない。
 
 ## API
 
