@@ -41,6 +41,15 @@ Direct API: [beatavue-api-r4x2cqmxbq-an.a.run.app](https://beatavue-api-r4x2cqmx
 
 ## Background upload
 
+### Terms used in this project
+
+| Term | Meaning | Why it matters | Code |
+| --- | --- | --- | --- |
+| **Generation** | The ID of one cloud publication cycle. Batches belong to this generation; pausing and resuming keeps it. After cloud deletion, a new import uses a new generation. | The server rejects old-generation uploads so delayed transfers cannot restore deleted history. | [Generation check](api/repository.py#L61) |
+| **Batch** | An immutable package of up to 100 sample additions or deletions, with a fixed `batch_id` and generation. | Retrying the same package keeps its ID, letting the server recognize it and return the saved acknowledgment. | [Batch payload](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L43), [receipt](api/repository.py#L64) |
+| **Anchor** | A HealthKit bookmark recording how far collection has progressed, stored separately for each metric and fixed import window. It tracks collection, not successful upload. | The next query gets changes since that bookmark. Saving it together with queued changes prevents those changes from being skipped. | [Read anchor](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L469), [save anchor](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L491) |
+| **Queue** | The ordered list of batches awaiting a matching server acknowledgment, saved in the iPhone’s `state.json`. The first batch uploads first. | Pending changes survive app restarts and transfer failures. This upload queue is separate from the GCP Cloud Tasks queue used for deletion. | [Saved batches](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L67), [upload scheduling](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L506) |
+
 Background upload has two stages: the app collects HealthKit changes into a saved queue, then iOS transfers a file from that queue. Collecting needs the app to run; an already scheduled transfer uses a background `URLSession`. iOS controls timing, so “immediate” HealthKit delivery does not promise immediate publication.
 
 ```mermaid

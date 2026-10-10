@@ -41,6 +41,15 @@ flowchart LR
 
 ## バックグラウンドアップロード
 
+### このプロジェクトで使う用語
+
+| 用語 | 意味 | 役割 | コード |
+| --- | --- | --- | --- |
+| **Generation（世代）** | クラウド公開の1サイクルを識別するID。バッチはこの世代に属する。一時停止と再開では維持し、クラウド削除後の新しいインポートでは新しい世代を使う。 | サーバーが古い世代の送信を拒否し、遅れた転送による削除済み履歴の復活を防ぐ。 | [世代の検証](api/repository.py#L61) |
+| **Batch（バッチ）** | 最大100件のサンプル追加・削除をまとめた、内容が変わらない送信単位。固定の`batch_id`と世代を持つ。 | 再送時も同じIDを使い、サーバーが処理済みと判定して保存済みの受領確認を返せるようにする。 | [バッチ形式](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L43)、[受領記録](api/repository.py#L64) |
+| **Anchor（アンカー）** | HealthKitからどこまで収集したかを示すしおり。測定種別と固定インポート範囲ごとに保存する。送信成功ではなく収集の進捗を表す。 | 次のクエリでしおり以降の変更を取得する。待機中の変更と一緒に保存し、変更の取りこぼしを防ぐ。 | [アンカー読取](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L469)、[アンカー保存](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L491) |
+| **Queue（キュー）** | 一致するサーバー受領確認を待つバッチの順序付きリスト。iPhoneの`state.json`に保存し、先頭から送る。 | アプリ再起動や転送失敗でも未完了の変更を保持する。削除処理用のGCP Cloud Tasksキューとは別。 | [保存するバッチ](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L67)、[送信登録](mobile/ios/Beatavue/Beatavue/CloudSync.swift#L506) |
+
 処理は2段階。アプリがHealthKitの変更を永続キューに保存し、そのキューのファイルをiOSが転送する。収集にはアプリの実行が必要だが、登録済みの転送はバックグラウンド`URLSession`を使う。実行時刻はiOSが決めるため、HealthKitの「即時」通知は即時公開を保証しない。
 
 ```mermaid
