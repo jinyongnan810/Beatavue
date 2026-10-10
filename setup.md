@@ -202,6 +202,8 @@ sh scripts/deploy-web.sh
 
 If the Firebase CLI reports 401, run `firebase login --reauth` and retry. Deploy the API first
 when changing its service name or region; update the Hosting rewrite in `firebase.json` too.
+Hosting explicitly selects site `beatavue` in `firebase.json`; keep this setting to avoid
+the CLI's “no site name or target name” error.
 
 ### iPhone/Watch
 

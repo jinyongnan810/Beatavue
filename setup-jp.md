@@ -203,6 +203,8 @@ sh scripts/deploy-web.sh
 
 Firebase CLIが401を返したら、`firebase login --reauth`して再実行。サービス名・リージョンを
 変更する場合はAPIを先にデプロイし、`firebase.json`のHosting書き換えも更新する。
+`firebase.json`でサイト`beatavue`を明示している。この設定を維持し、CLIの
+「no site name or target name」エラーを防ぐ。
 
 ### iPhone・Watch
 
