@@ -1,6 +1,8 @@
 """Firestore is the authority for generation fences, receipts, and tombstones."""
 import hashlib
+from collections import OrderedDict
 from datetime import datetime, timezone
+from threading import Lock
 
 from google.cloud import firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
@@ -25,6 +27,23 @@ class Repository:
     def __init__(self, client=None):
         self.db = client or firestore.Client()
         self.owner = self.db.collection("datasets").document("owner")
+        self._summary_cache = OrderedDict()
+        self._summary_lock = Lock()
+
+    # Keep only small, public aggregate responses; never cache raw measurements.
+    def cached_summary(self, key):
+        with self._summary_lock:
+            result = self._summary_cache.get(key)
+            if result is not None:
+                self._summary_cache.move_to_end(key)
+            return result
+
+    def cache_summary(self, key, result):
+        with self._summary_lock:
+            self._summary_cache[key] = result
+            self._summary_cache.move_to_end(key)
+            while len(self._summary_cache) > 32:
+                self._summary_cache.popitem(last=False)
 
     # Read the current publication state, generation, and cleanup status.
     def status(self):

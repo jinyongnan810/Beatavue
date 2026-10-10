@@ -272,3 +272,80 @@ def test_dst_day_buckets_keep_calendar_boundaries(repo):
     assert len(main.summaries(docs, zone, "day")) == 1
     assert main.summaries(docs, zone, "day")[0]["average"] == 70
     assert len(main.summaries(docs, zone, "hour")) == 2
+
+
+HISTORY_QUERY = "metric=heart_rate&from=2026-10-09T00:00:00Z&to=2026-10-10T00:00:00Z"
+
+
+def test_history_includes_ingestion_without_extra_status_request(repo, monkeypatch):
+    invoke("POST", "/v1/sync", upload(repo))
+    docs = list(repo.samples(repo.status()["generation"]).limit(10).stream())
+    monkeypatch.setattr(repo, "query", lambda *args: docs)
+    for path in ("/v1/samples", "/v1/summaries"):
+        result, status, headers = invoke("GET", path + "?" + HISTORY_QUERY, token=False)
+        assert status == 200
+        assert result["last_ingestion"] == repo.status()["last_ingestion"].isoformat()
+        assert headers["Cache-Control"] == "no-store"
+
+
+def test_summary_cache_avoids_sample_reads_and_invalidates_after_sync(repo, monkeypatch):
+    batch = upload(repo)
+    invoke("POST", "/v1/sync", batch)
+    queries = []
+    def query(state, *args):
+        queries.append(state)
+        return list(repo.samples(state["generation"]).limit(10).stream())
+    monkeypatch.setattr(repo, "query", query)
+    path = "/v1/summaries?" + HISTORY_QUERY
+    first = invoke("GET", path, token=False)
+    assert invoke("GET", path, token=False) == first
+    assert len(queries) == 1
+    budget = repo.db.values["api_limits/public"]
+    assert budget["requests"] == 2
+    assert budget["reserved_reads"] == main.MAX_SUMMARY_SAMPLES + 1
+    invoke("POST", "/v1/sync", upload(repo, generation=batch["generation"]))
+    result, status, _ = invoke("GET", path, token=False)
+    assert status == 200 and result["summary"]["count"] == 2
+    assert len(queries) == 2
+
+
+def test_summary_cache_respects_deletion_fence(repo, monkeypatch):
+    batch = upload(repo)
+    invoke("POST", "/v1/sync", batch)
+    def query(state, *args):
+        return list(repo.samples(state["generation"]).limit(10).stream()) if state.get("enabled") else []
+    monkeypatch.setattr(repo, "query", query)
+    path = "/v1/summaries?" + HISTORY_QUERY
+    assert invoke("GET", path, token=False)[0]["summary"]["count"] == 1
+    monkeypatch.setattr(main, "enqueue_cleanup", lambda state: None)
+    invoke("DELETE", "/v1/data", {"generation": batch["generation"], "deletion_id": str(uuid4())})
+    assert invoke("GET", path, token=False)[0]["summary"]["count"] == 0
+
+
+def test_cached_summary_still_rechecks_fence(repo, monkeypatch):
+    monkeypatch.setattr(repo, "query", lambda *args: [])
+    path = "/v1/summaries?" + HISTORY_QUERY
+    assert invoke("GET", path, token=False)[1] == 200
+    states = iter([{}, {"generation": "changed", "enabled": True}])
+    monkeypatch.setattr(repo, "status", lambda: next(states))
+    assert invoke("GET", path, token=False)[1] == 409
+
+
+def test_cached_summary_still_enforces_request_allowance(repo, monkeypatch):
+    monkeypatch.setattr(repo, "query", lambda *args: [])
+    path = "/v1/summaries?" + HISTORY_QUERY
+    for _ in range(60):
+        assert invoke("GET", path, token=False)[1] == 200
+    assert invoke("GET", path, token=False)[1] == 429
+
+
+@pytest.mark.parametrize("path", [
+    "/v1/samples?" + HISTORY_QUERY + "&limit=501",
+    "/v1/summaries?" + HISTORY_QUERY + "&bucket=month",
+    "/v1/summaries?" + HISTORY_QUERY + "&timezone=Invalid/Zone",
+])
+def test_invalid_query_options_do_not_read_firestore(repo, monkeypatch, path):
+    def unexpected():
+        pytest.fail("Invalid query must be rejected before reading Firestore")
+    monkeypatch.setattr(repo, "status", unexpected)
+    assert invoke("GET", path, token=False)[1] == 400

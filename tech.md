@@ -36,7 +36,7 @@ Direct API: [beatavue-api-r4x2cqmxbq-an.a.run.app](https://beatavue-api-r4x2cqmx
 - Averages weight each available sample equally. Gaps remain visible.
 - iPhone reads local history and mirrors an explicit Watch workout. Live readings stay local.
 - Web day views show raw points; week/month views show daily sample averages. Weeks start Monday.
-- Calendar boundaries use the selected timezone, including DST. Visible pages refresh every two minutes.
+- Calendar boundaries use the selected timezone, including DST. Views load on first selection; Refresh explicitly reloads them. There is no timer, focus, or visibility refresh.
 - Publishing starts off. Enabling it publishes the current day and preceding 29 days, then future changes.
 
 ## Background upload
@@ -185,11 +185,17 @@ Delete operation: `{"kind":"delete","uuid":"<sample UUID>"}`. Optional private s
 | Page | 1–500 samples; query-bound opaque cursor |
 | Summary | ≤20,000 samples; hourly UTC or daily local buckets |
 | Public allowance | Shared 60 requests / 100,000 reserved sample reads per minute |
-| Caching | `no-store`; generation rechecked before returning data |
+| Caching | HTTP `no-store`; up to 12 loaded web views per page visit; up to 32 aggregate responses per API instance, keyed by generation, publication state, ingestion timestamp, and query. Generation rechecked before returning data. |
 
 Timestamps require the full date and timezone. Values must be positive and units must match the metric.
 The public allowance reduces load; it is not a billing cap. Summary statistics are sample-based;
 `latest` is restricted to the requested period.
+
+Day views request only paginated samples and compute statistics locally. Week/month views request only summaries.
+Both history endpoints include `last_ingestion`, avoiding a separate status request. Refresh clears the web view cache.
+A first or invalidated summary still reads up to 20,001 raw sample documents to calculate exact statistics;
+unchanged cached summaries skip those sample reads. Public requests still read publication/fence and rate-limit documents.
+The API cache is bounded and local to each instance; it is lost on restart. No persistent rollups are maintained.
 
 | Status | Meaning |
 | --- | --- |

@@ -167,11 +167,12 @@ def api(request):
             return response({"last_ingestion": stamp.isoformat() if stamp else None})
         if request.method == "GET" and path in ("/v1/samples", "/v1/summaries"):
             metric, start, end = parameters(request)
-            state = repo.status()
+            summary_key = None
             if path == "/v1/samples":
                 limit = int(request.args.get("limit", 500))
                 if not 1 <= limit <= 500:
                     raise ValueError("Limit must be 1–500")
+                state = repo.status()
                 after = cursor_decode(request.args["cursor"], state, metric, start, end) if "cursor" in request.args else None
                 repo.reserve_public_reads(limit + 1)
                 docs = repo.query(state, metric, start, end, limit + 1, after)
@@ -182,17 +183,29 @@ def api(request):
                 bucket = request.args.get("bucket", "day")
                 if bucket not in ("hour", "day"):
                     raise ValueError("Unsupported bucket")
-                repo.reserve_public_reads(MAX_SUMMARY_SAMPLES + 1)
-                docs = repo.query(state, metric, start, end, MAX_SUMMARY_SAMPLES + 1)
-                if len(docs) > MAX_SUMMARY_SAMPLES:
-                    return response({"error": "range_too_dense", "message": "Select a shorter range"}, 422)
-                result = {"buckets": summaries(docs, zone, bucket), "summary": stats([d.to_dict()["value"] for d in docs]),
-                          "latest": public_sample(docs[-1].to_dict()) if docs else None,
-                          "unit": "bpm" if metric == "heart_rate" else "ms", "timezone": str(zone), "bucket": bucket}
+                state = repo.status()
+                # Uploads and deletion fences invalidate aggregate reuse immediately.
+                summary_key = (state.get("generation"), state.get("enabled"), state.get("last_ingestion"),
+                               metric, start, end, str(zone), bucket)
+                cached = repo.cached_summary(summary_key)
+                repo.reserve_public_reads(0 if cached is not None else MAX_SUMMARY_SAMPLES + 1)
+                if cached is not None:
+                    result = dict(cached)
+                else:
+                    docs = repo.query(state, metric, start, end, MAX_SUMMARY_SAMPLES + 1)
+                    if len(docs) > MAX_SUMMARY_SAMPLES:
+                        return response({"error": "range_too_dense", "message": "Select a shorter range"}, 422)
+                    result = {"buckets": summaries(docs, zone, bucket), "summary": stats([d.to_dict()["value"] for d in docs]),
+                              "latest": public_sample(docs[-1].to_dict()) if docs else None,
+                              "unit": "bpm" if metric == "heart_rate" else "ms", "timezone": str(zone), "bucket": bucket}
             # Recheck the deletion fence before returning queried data.
             current = repo.status()
             if current.get("generation") != state.get("generation") or current.get("enabled") != state.get("enabled"):
                 return response({"error": "dataset_changed", "message": "Retry the query"}, 409)
+            stamp = state.get("last_ingestion")
+            result["last_ingestion"] = stamp.isoformat() if stamp else None
+            if summary_key is not None and current.get("last_ingestion") == stamp:
+                repo.cache_summary(summary_key, dict(result))
             return response(result)
         return response({"error": "not_found"}, 404)
     except OverflowError:

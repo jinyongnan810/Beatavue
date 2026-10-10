@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { DateTime } from 'luxon';
-import { get, type Bucket, type Metric, type Sample, type Summary } from './api';
+import { clearHistoryCache, loadHistory, type Bucket, type Metric, type Sample, type Summary } from './api';
 import './style.css';
 
 type Period = 'day' | 'week' | 'month';
@@ -58,39 +58,26 @@ function App() {
     const end = start.plus(period === 'day' ? { days: 1 } : period === 'week' ? { weeks: 1 } : { months: 1 });
     return { start, end };
   }, [date, period, zone]);
+  const from = range.start.toUTC().toISO()!;
+  const to = range.end.toUTC().toISO()!;
+  const refresh = () => { clearHistoryCache(); setRevision(value => value + 1); };
 
   useEffect(() => {
     const controller = new AbortController();
-    setLoading(true); setError(null); setSummary(null); setSamples([]);
-    const params = { metric, from: range.start.toUTC().toISO()!, to: range.end.toUTC().toISO()!, timezone: zone, bucket: period === 'day' ? 'hour' : 'day' };
+    setLoading(true); setError(null); setSummary(null); setSamples([]); setIngestion(null);
+    const params = { metric, from, to, timezone: zone, bucket: period === 'day' ? 'hour' : 'day' };
     async function load() {
       try {
-        const [summaryResult, status] = await Promise.all([
-          get<Summary>('/v1/summaries', params, controller.signal),
-          get<{ last_ingestion: string | null }>('/v1/sync-status', {}, controller.signal),
-        ]);
-        const raw: Sample[] = [];
-        if (period === 'day') {
-          let cursor: string | null = null;
-          do {
-            const page: { samples: Sample[]; next_cursor: string | null } = await get('/v1/samples', { ...params, limit: '500', ...(cursor ? { cursor } : {}) }, controller.signal);
-            raw.push(...page.samples); cursor = page.next_cursor;
-            if (raw.length > 20000) throw new Error('Too many samples to display.');
-          } while (cursor);
-        }
-        if (!controller.signal.aborted) { setSummary(summaryResult); setSamples(raw); setIngestion(status.last_ingestion); }
+        const result = await loadHistory(params, period === 'day', controller.signal);
+        if (!controller.signal.aborted) { setSummary(result.summary); setSamples(result.samples); setIngestion(result.summary.last_ingestion); }
       } catch (failure) {
         if (!controller.signal.aborted) setError(failure instanceof Error ? failure.message : 'Could not load history.');
       } finally { if (!controller.signal.aborted) setLoading(false); }
     }
-    void load();
+    // Let StrictMode finish its setup/cleanup probe before starting a request.
+    queueMicrotask(() => { if (!controller.signal.aborted) void load(); });
     return () => controller.abort();
-  }, [metric, period, range, zone, revision]);
-
-  useEffect(() => {
-    const timer = window.setInterval(() => { if (document.visibilityState === 'visible') setRevision(value => value + 1); }, 120000);
-    return () => window.clearInterval(timer);
-  }, []);
+  }, [metric, period, from, to, zone, revision]);
 
   const points: Point[] = period === 'day'
     ? samples.map(sample => ({ time: sample.start, value: sample.value, detail: sample.source }))
@@ -101,10 +88,10 @@ function App() {
     <header><a className="brand" href="/">♡ <span>Beatavue</span></a><span className="badge">Personal health journal</span></header>
     <section className="intro"><p className="eyebrow">A little closer to the rhythm</p><h1>Heart history,<br /><em>at a glance.</em></h1><p>One person’s Apple Health measurements. Shared openly, with room for the gaps.</p></section>
     <section className="panel" aria-label="History controls">
-      <div className="controls"><div className="segments">{(['heart_rate', 'hrv_sdnn'] as Metric[]).map(value => <button key={value} aria-pressed={metric === value} onClick={() => setMetric(value)}>{labels[value]}</button>)}</div><button className="refresh" onClick={() => setRevision(value => value + 1)} disabled={loading}>↻ Refresh</button></div>
+      <div className="controls"><div className="segments">{(['heart_rate', 'hrv_sdnn'] as Metric[]).map(value => <button key={value} aria-pressed={metric === value} onClick={() => setMetric(value)}>{labels[value]}</button>)}</div><button className="refresh" onClick={refresh} disabled={loading}>↻ Refresh</button></div>
       <div className="navigation"><div className="segments periods">{(['day', 'week', 'month'] as Period[]).map(value => <button key={value} aria-pressed={period === value} onClick={() => setPeriod(value)}>{value}</button>)}</div><div className="date"><button aria-label="Previous period" onClick={() => move(-1)}>‹</button><input type="date" aria-label="Selected date" value={date} max={DateTime.now().setZone(zone).toISODate()!} onChange={event => { if (event.target.value) setDate(event.target.value); }} /><button aria-label="Next period" disabled={range.end.toMillis() > Date.now()} onClick={() => move(1)}>›</button></div><select aria-label="Display timezone" value={zone} onChange={event => setZone(event.target.value)}>{zones.map(value => <option key={value}>{value}</option>)}</select></div>
       <div className="chart-heading"><div><p className="eyebrow">{range.start.toFormat('MMM d')} – {range.end.minus({ days: 1 }).toFormat('MMM d, yyyy')}</p><h2>{labels[metric]} <small>{units[metric]}</small></h2></div><span>{period === 'day' ? 'Actual measurements' : 'Daily sample averages'}</span></div>
-      {loading ? <div className="empty" role="status">Loading published history…</div> : error ? <div className="empty" role="alert"><h2>History is unavailable</h2><p>{error}</p><button onClick={() => setRevision(value => value + 1)}>Try again</button></div> : <Chart points={points} start={range.start.toMillis()} end={range.end.toMillis()} zone={zone} unit={units[metric]} aggregated={period !== 'day'} />}
+      {loading ? <div className="empty" role="status">Loading published history…</div> : error ? <div className="empty" role="alert"><h2>History is unavailable</h2><p>{error}</p><button onClick={refresh}>Try again</button></div> : <Chart points={points} start={range.start.toMillis()} end={range.end.toMillis()} zone={zone} unit={units[metric]} aggregated={period !== 'day'} />}
       <div className="stats">{[['Samples', stats?.count], ['Minimum', stats?.min], ['Maximum', stats?.max], ['Sample average', stats?.average]].map(([label, value]) => <div key={label as string}><span>{label}</span><strong>{number(value as number | null | undefined)} <small>{label === 'Samples' ? '' : units[metric]}</small></strong></div>)}</div>
       <p className="note">Averages give equal weight to available samples. Measurements are intermittent; gaps do not imply continuous recording. Overlapping sources are retained.</p>
     </section>
