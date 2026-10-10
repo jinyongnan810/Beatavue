@@ -38,6 +38,14 @@ are stored in device-only Keychain, never in the JSON queue. Temporary failures 
 retry with exponential backoff and jitter. Locked-device access failures catch up on foreground
 entry or **Sync now**. Background delivery remains best effort and needs physical-device validation.
 
+The durable queue remains completely protected. Only temporary background upload copies use
+protection until the first device unlock, allowing the system transfer daemon to reopen them
+while locked. Payload timestamps include the full date, time, fractional seconds, and timezone.
+On launch, the app recovers queues from the initial time-only timestamp bug by clearing their
+anchors and rereading additions from HealthKit, preserving queued deletions and valid batch IDs.
+Affected mixed batches get new IDs because their payloads change. Updating the app and tapping
+**Sync now** is sufficient; deleting cloud history or resetting local sync is not required.
+
 **Pause publishing** retains the queue but leaves cloud history public. **Delete cloud history**
 disables publishing and clears pending local uploads before asking the server to fence and purge
 the generation. Tap it again to check deletion completion or retry a failed request; a new import

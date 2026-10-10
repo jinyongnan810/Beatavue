@@ -23,8 +23,8 @@ nonisolated struct CloudSample: Codable, Equatable, Sendable {
         metric = sample.metric == .heartRate ? "heart_rate" : "hrv_sdnn"
         value = sample.value
         unit = sample.metric.unit
-        start = sample.start.ISO8601Format(.iso8601.timeZone(separator: .colon).dateTimeSeparator(.standard).time(includingFractionalSeconds: true))
-        end = sample.end.ISO8601Format(.iso8601.timeZone(separator: .colon).dateTimeSeparator(.standard).time(includingFractionalSeconds: true))
+        start = sample.start.ISO8601Format(.iso8601.year().month().day().dateSeparator(.dash).dateTimeSeparator(.standard).time(includingFractionalSeconds: true).timeZone(separator: .colon))
+        end = sample.end.ISO8601Format(.iso8601.year().month().day().dateSeparator(.dash).dateTimeSeparator(.standard).time(includingFractionalSeconds: true).timeZone(separator: .colon))
         source_name = sample.sourceName
         source_identifier = sample.sourceIdentifier
         source_version = sample.sourceVersion
@@ -68,6 +68,31 @@ nonisolated struct CloudState: Codable, Equatable, Sendable {
     var lastUpload: Date?
     var retryAt: Date?
     var failures = 0
+
+    /// The original formatter emitted only a time. The API rejected those batches atomically,
+    /// so reread their additions from HealthKit instead of inventing the missing dates.
+    mutating func recoverTimeOnlyBatches() -> Bool {
+        func missingDate(_ operation: CloudOperation) -> Bool {
+            guard let sample = operation.sample else { return false }
+            return !sample.start.contains("T") || !sample.end.contains("T")
+        }
+        guard batches.contains(where: { $0.operations.contains(where: missingDate) }) else { return false }
+        batches = batches.compactMap { batch in
+            guard batch.operations.contains(where: missingDate) else { return batch }
+            // Retain queued deletions and any correctly encoded additions. A changed payload
+            // gets a fresh batch ID; already valid batches keep their original retry identity.
+            let retained = batch.operations.filter { !missingDate($0) }
+            guard !retained.isEmpty else { return nil }
+            return CloudBatch(schema_version: batch.schema_version, generation: batch.generation,
+                              batch_id: UUID(), operations: retained)
+        }
+        for index in windows.indices {
+            windows[index].anchors = [:]
+        }
+        failures = 0
+        retryAt = nil
+        return true
+    }
 }
 
 /// The token is device-local and is never written with health data or settings.
@@ -194,6 +219,18 @@ final class CloudSync {
             if FileManager.default.fileExists(atPath: url.path) {
                 state = try JSONDecoder().decode(CloudState.self, from: Data(contentsOf: url))
                 guard state.version == 1 else { throw CloudFailure.message("Unsupported cloud sync state.") }
+                var recovered = state
+                if recovered.recoverTimeOnlyBatches() { try save(recovered) }
+            }
+            if state.enabled {
+                // Upgrade upload copies from the previous release before reattaching tasks.
+                for batch in state.batches {
+                    let file = try directory().appendingPathComponent("upload-\(batch.batch_id.uuidString).json")
+                    if FileManager.default.fileExists(atPath: file.path) {
+                        try FileManager.default.setAttributes([.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
+                                                              ofItemAtPath: file.path)
+                    }
+                }
             }
             ready = true
             registerObservers()
@@ -473,7 +510,9 @@ final class CloudSync {
             let file = try directory().appendingPathComponent("upload-\(batch.batch_id.uuidString).json")
             let data = try JSONEncoder().encode(batch)
             guard data.count <= 256 * 1024 else { throw CloudFailure.message("Upload batch exceeds the server limit.") }
-            try data.write(to: file, options: [.atomic, .completeFileProtectionUnlessOpen])
+            // The background transfer daemon must reopen this file while the device is locked.
+            // Keep the durable queue at complete protection; relax only its temporary upload copy.
+            try data.write(to: file, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
             var request = URLRequest(url: URL(string: state.endpoint + "/v1/sync")!)
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
