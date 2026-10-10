@@ -39,28 +39,96 @@ Direct API: [beatavue-api-r4x2cqmxbq-an.a.run.app](https://beatavue-api-r4x2cqmx
 - Calendar boundaries use the selected timezone, including DST. Visible pages refresh every two minutes.
 - Publishing starts off. Enabling it publishes the current day and preceding 29 days, then future changes.
 
-## Durable sync
+## Background upload
+
+Background upload has two stages: the app collects HealthKit changes into a saved queue, then iOS transfers a file from that queue. Collecting needs the app to run; an already scheduled transfer uses a background `URLSession`. iOS controls timing, so “immediate” HealthKit delivery does not promise immediate publication.
+
+```mermaid
+sequenceDiagram
+    participant H as HealthKit
+    participant A as iPhone app
+    participant Q as Saved queue
+    participant I as iOS background session
+    participant S as API + Firestore
+    H->>A: Changes available
+    A->>H: Read additions/deletions since anchor
+    A->>Q: Atomically save batches + new anchor
+    A->>H: Complete observer callback
+    A->>I: Schedule JSON file + Bearer token
+    I->>S: POST /v1/sync
+    S->>S: Commit samples + receipt together
+    S-->>I: Batch ID + generation + count
+    I-->>A: Deliver completion, including after relaunch
+    A->>Q: Remove batch only when acknowledgment matches
+```
+
+### Collect and save
+
+1. **Publishing requires opt-in.** Enabling publishing saves a stable import ID, calls `/v1/import`, and stores the returned generation. The initial window starts 29 days before today, including today and future samples. The generation identifies this publication session, allowing the server to reject uploads from a deleted session. See [enable()](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:305) and [generation validation](/Users/kin/Documents/GitHub/Beatavue/api/repository.py:61).
+2. **Changes trigger collection.** An observer for each metric requests `.immediate` background delivery. Its callback runs `syncNow()` and completes after collection, without waiting for the HTTP response. Opening the app also catches up. See [HealthKit observers](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:426) and [foreground catch-up](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/ContentView.swift:41).
+3. **An anchor is a bookmark.** Each metric and fixed import window has its own HealthKit anchor. The query reads additions and deletions since that bookmark, in pages of 100. Additions become `upsert` operations; removals become `delete` operations. Deletion wins if both occur for the same UUID in a page. See [anchored collection](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:469).
+4. **Save before moving the bookmark.** Operations become batches of at most 100, each with a fixed ID. New batches and the new anchor are saved together through atomic file replacement. This avoids advancing the anchor while losing the corresponding changes. In-memory state changes only after the write succeeds. See [batch and anchor update](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:485) and [atomic state save](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:279).
+
+### Schedule the file transfer
+
+The scheduler takes the first queued batch and allows one active transfer. It encodes JSON, checks the 256 KiB limit, reads the Keychain token, and creates a `POST /v1/sync` file-upload task. The task description ties each attempt to its stable batch ID. See [upload scheduler](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:506).
+
+The session uses a stable identifier, requests background launch events, waits for connectivity, and sets a 24-hour resource timeout and 60-second request timeout. These settings do not guarantee a delivery time. See [background session configuration](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:146).
+
+| File | Protection | Purpose |
+| --- | --- | --- |
+| `state.json` | `.completeFileProtection` | Durable queue and anchors; protected while locked. |
+| `upload-<batch ID>.json` | `.completeFileProtectionUntilFirstUserAuthentication` | Lets the transfer service reopen a prepared copy while locked after the first unlock since boot. |
+
+Only the temporary upload copy has the weaker protection. The folder is excluded from backup, and the copy is removed after a matching acknowledgment. If loading or saving the protected queue fails while locked, pending work remains for a later retry. Unlocking and opening the app allows it to catch up. See [backup exclusion](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:267), [upload file protection](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:513), and [acknowledgment save failure](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:569).
+
+### Complete, retry, and reconnect
+
+**The acknowledgment must match.** The app removes a batch only when there is no transfer error, status is 200, and `batch_id`, `generation`, and `acknowledged` match the queued batch. It saves the shortened queue before deleting the temporary file or scheduling the next batch. See [acknowledgment checks](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:529).
+
+**Repeating a batch is safe.** Firestore commits sample changes and a receipt in one transaction. The receipt stores the validated payload’s hash and acknowledgment. If the server commits but the response is lost, an unchanged retry returns that saved acknowledgment. Reusing the ID with different content returns 409. Tombstones prevent late additions from restoring deleted samples. See [payload hash](/Users/kin/Documents/GitHub/Beatavue/api/main.py:140) and [transaction and receipt](/Users/kin/Documents/GitHub/Beatavue/api/repository.py:55).
+
+**Temporary failures keep the queue.** Retry delay starts at 10 seconds, doubles up to one hour, and adds 0–10 seconds of jitter. Saved `retryAt` becomes the next task’s earliest start time. For 400, 401, 409, or 413, the completion handler retains the batch and shows an error without automatically scheduling another attempt; correct the problem and use Sync now. See [retry handling](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:552) and [earliest start time](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:523).
+
+**Relaunch reconnects existing work.** Startup loads the queue and enumerates background tasks. It adopts a task matching the first batch and cancels other tasks before scheduling more work. When iOS delivers background events, the app delegate reconnects the session; the system completion handler runs after event delivery finishes. See [task restoration](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:237), [app delegate](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:592), and [event completion](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:213).
+
+Pausing retains the queue and anchors but cancels collection and transfers. Legacy time-only batches are recovered by clearing anchors and rereading additions from HealthKit; queued deletions survive. See [pause](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:335) and [legacy recovery](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:74). Physical-device background behavior still needs acceptance testing.
+
+## Authentication
+
+There are three access paths: public viewing, owner changes, and service-to-service cleanup. The owner token grants permission to change the single owner dataset; it does not identify individual users.
 
 ```mermaid
 flowchart LR
-    Changes[Anchored HealthKit changes] --> Queue[Save changes + anchors]
-    Queue --> Upload[Background file upload]
-    Upload --> Ack{Matching acknowledgment?}
-    Ack -->|Yes| Remove[Remove batch]
-    Ack -->|No| Retry[Keep batch + retry]
-    Retry --> Upload
+    Keychain[iPhone Keychain] -->|Bearer token over HTTPS| API[Public API function]
+    Browser[Browser] -->|No token: GET| API
+    Secret[Secret Manager] -->|UPLOAD_TOKEN| API
+    API --> Check{Check token for mutations}
+    Check -->|Valid| DB[(Owner dataset)]
+    API --> Tasks[Cloud Tasks]
+    Tasks -->|OIDC identity token| IAM{Cloud Run IAM}
+    IAM -->|Task service account allowed| Worker[Cleanup function]
 ```
 
-- Stable sample UUIDs and batch IDs make retries idempotent. Reusing a batch ID with changed content returns 409.
-- A generation fences each import. Old uploads cannot restore a deleted generation.
-- Tombstones make deletion win over late additions to the same UUID.
-- Queue and anchors save atomically. Fixed import windows have independent anchors.
-- The durable queue uses complete file protection and is excluded from backups.
-- Temporary upload files use protection until first unlock, allowing locked-device background transfers.
-- The token uses device-only Keychain storage after first unlock. Redirects are rejected.
-- Relaunch reconnects background tasks. Temporary failures use exponential backoff and jitter.
-- Legacy time-only payloads are reread from HealthKit; queued deletions and valid retry IDs survive recovery.
-- HealthKit background delivery is best effort; foreground entry catches up. Read-permission denial is not detectable.
+### Owner token: iPhone to API
+
+The owner configures an HTTPS base URL and enters the shared upload token. The iPhone stores it separately from health data as a Keychain generic password (`com.kinn.Beatavue.cloud` / `upload-token`). `AfterFirstUnlockThisDeviceOnly` allows access after the first unlock following boot and keeps the item tied to this device. The app requires at least 32 characters. See [endpoint validation](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:285) and [Keychain storage](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:98). The macOS Keychain copy used during setup is separate; the iPhone reads its own Keychain item.
+
+Uploads send `Authorization: Bearer <token>`. Import and deletion control requests send the same header through an ephemeral session. Both paths reject HTTP redirects, preventing the configured destination from redirecting a token-bearing request. See [upload header](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:519), [control requests](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:572), and [redirect rejection](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:178).
+
+On GCP, the API service account can read the Secret Manager secret. The selected version is injected as `UPLOAD_TOKEN`. Terraform stores the secret reference and version; its value is provisioned separately. See [secret access](/Users/kin/Documents/GitHub/Beatavue/infra/main.tf:97) and [secret injection](/Users/kin/Documents/GitHub/Beatavue/infra/main.tf:245).
+
+The API checks `POST /v1/import`, `POST /v1/sync`, and `DELETE /v1/data` **before executing their handlers**. It compares the complete Bearer header with the configured token using `hmac.compare_digest`. Missing or mismatched credentials, or a configured token shorter than 32 characters, return 401. See [token comparison](/Users/kin/Documents/GitHub/Beatavue/api/main.py:36) and [route guard](/Users/kin/Documents/GitHub/Beatavue/api/main.py:133).
+
+This is a static shared secret with no login, refresh token, or automatic expiry. Rotation requires a new secret version, a deployment selecting it, and an updated iPhone token; see [Setup](setup.md).
+
+### Public reads and internal identities
+
+**Public viewing:** Cloud Run grants `allUsers` invocation of the API function, allowing requests to reach the Python route guard. Supported GET routes need no token. Public sample output omits UUIDs, device information, and private source identifiers. Knowing the URL is sufficient to view published measurements. See [public API IAM](/Users/kin/Documents/GitHub/Beatavue/infra/main.tf:257), [public routes](/Users/kin/Documents/GitHub/Beatavue/api/main.py:150), and [public sample fields](/Users/kin/Documents/GitHub/Beatavue/api/main.py:69).
+
+**Cleanup:** the API creates a Cloud Task with an OIDC identity token using `beatavue-tasks` and the worker URL as its audience. Cloud Run IAM checks that identity before the worker runs; Terraform grants this service account invocation permission. The owner token is not the worker credential. See [OIDC task request](/Users/kin/Documents/GitHub/Beatavue/api/main.py:93), [permission to use task identity](/Users/kin/Documents/GitHub/Beatavue/infra/main.tf:166), and [worker invoker permission](/Users/kin/Documents/GitHub/Beatavue/infra/main.tf:208).
+
+**Database access:** the API and worker use their runtime service accounts with `roles/datastore.user`. Browser and iPhone clients use the API; Firestore rules deny direct client reads and writes. Client rules and server IAM are separate: the server SDK is authorized through IAM. See [database IAM](/Users/kin/Documents/GitHub/Beatavue/infra/main.tf:47), [server SDK client](/Users/kin/Documents/GitHub/Beatavue/api/repository.py:23), and [deny-all client rules](/Users/kin/Documents/GitHub/Beatavue/infra/firestore.rules:4). Firebase Authentication is not used.
 
 ## API
 

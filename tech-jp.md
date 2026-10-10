@@ -39,28 +39,96 @@ flowchart LR
 - 選択したタイムゾーンと夏時間で期間を計算。表示中は2分ごとに更新。
 - 公開は初期状態で無効。有効化すると当日と過去29日、その後の変更を公開する。
 
-## 永続的な同期
+## バックグラウンドアップロード
+
+処理は2段階。アプリがHealthKitの変更を永続キューに保存し、そのキューのファイルをiOSが転送する。収集にはアプリの実行が必要だが、登録済みの転送はバックグラウンド`URLSession`を使う。実行時刻はiOSが決めるため、HealthKitの「即時」通知は即時公開を保証しない。
+
+```mermaid
+sequenceDiagram
+    participant H as HealthKit
+    participant A as iPhoneアプリ
+    participant Q as 保存済みキュー
+    participant I as iOSバックグラウンドセッション
+    participant S as APIとFirestore
+    H->>A: 変更を通知
+    A->>H: アンカー以降の追加と削除を取得
+    A->>Q: バッチと新アンカーを一括保存
+    A->>H: 通知コールバックを完了
+    A->>I: JSONファイルとBearerトークンで転送登録
+    I->>S: POST /v1/sync
+    S->>S: サンプルと受領記録を一括確定
+    S-->>I: バッチID・世代・操作数
+    I-->>A: 再起動後も完了イベントを配信
+    A->>Q: 受領確認が一致した場合だけバッチ削除
+```
+
+### 収集と保存
+
+1. **公開には明示的な有効化が必要。** 固定のインポートIDを保存し、`/v1/import`を呼び、返された世代を保存する。初期範囲は今日の29日前から始まり、今日と今後のサンプルを含む。世代は公開単位を表し、削除済みの世代からの送信をサーバーが拒否するために使う。[enable()](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:305)、[世代の検証](/Users/kin/Documents/GitHub/Beatavue/api/repository.py:61)。
+2. **変更通知で収集する。** 測定種別ごとに監視クエリを登録し、`.immediate`のバックグラウンド通知を要求する。通知時は`syncNow()`で収集し、HTTP応答を待たずにコールバックを完了する。アプリを開いたときも未取得分を収集する。[HealthKit監視](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:426)、[フォアグラウンドでの収集](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/ContentView.swift:41)。
+3. **アンカーは取得位置のしおり。** 測定種別と固定インポート範囲ごとにアンカーを持ち、前回以降の追加・削除を100件ずつ取得する。追加は`upsert`、削除は`delete`に変換。同じページで同一UUIDの追加と削除があれば削除を優先する。[アンカー付き取得](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:469)。
+4. **しおりを進める前に保存する。** 最大100操作のバッチに分割し、それぞれ固定IDを付ける。バッチと新アンカーを同じファイルの原子的な置換で保存し、変更を失ったままアンカーだけが進むことを防ぐ。メモリー上の状態も書き込み成功後に更新する。[バッチとアンカーの更新](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:485)、[原子的な保存](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:279)。
+
+### ファイル転送の登録
+
+先頭のバッチから順番に、1つの転送を実行する。JSON化して256 KiB以内かを確認し、Keychainのトークンを読み、`POST /v1/sync`のファイル送信タスクを作る。タスクの説明文字列で各試行と固定バッチIDを対応付ける。[送信スケジューラー](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:506)。
+
+セッションは固定識別子を使い、バックグラウンド起動イベントを要求し、接続が戻るまで待つ。リソースのタイムアウトは24時間、リクエストは60秒。これらは設定値であり、配信時刻の保証ではない。[バックグラウンドセッション設定](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:146)。
+
+| ファイル | 保護 | 用途 |
+| --- | --- | --- |
+| `state.json` | `.completeFileProtection` | 永続キューとアンカー。ロック中は保護する。 |
+| `upload-<バッチID>.json` | `.completeFileProtectionUntilFirstUserAuthentication` | 起動後の初回ロック解除後は、ロック中も転送サービスが準備済みコピーを開けるようにする。 |
+
+保護を緩めるのは一時送信用コピーだけ。フォルダーはバックアップから除外し、受領確認が一致するとコピーを削除する。ロック中に永続キューの読み込みや保存ができなければ、未完了の処理を後で再試行する。ロック解除してアプリを開くと追いつける。[バックアップ除外](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:267)、[送信ファイルの保護](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:513)、[受領確認の保存失敗](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:569)。
+
+### 完了、再試行、再接続
+
+**受領確認は対象バッチと一致する必要がある。** 転送エラーなし、HTTP 200、`batch_id`・`generation`・`acknowledged`が待機中のバッチと一致した場合だけ削除する。更新したキューを保存してから一時ファイルを削除し、次のバッチを送る。[受領確認の検証](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:529)。
+
+**同じバッチの再送は安全。** Firestoreはサンプル変更と受領記録を1つのトランザクションで確定する。記録には検証済みペイロードのハッシュと応答を保存する。確定後に応答が失われても、同じ内容の再送には保存済み応答を返す。同じIDで内容を変えると409。削除済みの印で、遅れた追加による復活も防ぐ。[ペイロードのハッシュ](/Users/kin/Documents/GitHub/Beatavue/api/main.py:140)、[トランザクションと受領記録](/Users/kin/Documents/GitHub/Beatavue/api/repository.py:55)。
+
+**一時的な失敗でもキューを保持する。** 遅延は10秒から倍増し、最大1時間に0〜10秒のランダムな遅延を加える。保存した`retryAt`を次のタスクの開始可能時刻に設定する。400・401・409・413ではバッチを保持してエラーを表示し、その完了処理から次の試行を自動登録しない。原因を修正して「今すぐ同期」を使う。[再試行処理](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:552)、[開始可能時刻](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:523)。
+
+**再起動時は既存タスクに再接続する。** キューを読み、バックグラウンドタスクを列挙する。先頭バッチに対応するタスクを引き継ぎ、他を取り消してから追加の送信を登録する。iOSからバックグラウンドイベントが届くとアプリデリゲートがセッションを再接続し、イベント配信完了後にシステムの完了ハンドラーを呼ぶ。[タスク復元](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:237)、[アプリデリゲート](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:592)、[イベント完了](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:213)。
+
+一時停止ではキューとアンカーを残し、収集と転送を取り消す。旧形式の時刻だけを含むバッチはアンカーを消して追加分をHealthKitから再取得し、待機中の削除は残す。[一時停止](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:335)、[旧形式の復旧](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:74)。実機のバックグラウンド動作は引き続き検証が必要。
+
+## 認証
+
+アクセス経路は公開閲覧、所有者による変更、サービス間の削除処理の3つ。所有者トークンは単一の所有者データを変更する権限を与え、個々のユーザーを識別するものではない。
 
 ```mermaid
 flowchart LR
-    Changes[アンカー付きHealthKit変更] --> Queue[変更とアンカーを保存]
-    Queue --> Upload[バックグラウンドでファイル送信]
-    Upload --> Ack{応答が一致するか}
-    Ack -->|はい| Remove[バッチを削除]
-    Ack -->|いいえ| Retry[保持して再試行]
-    Retry --> Upload
+    Keychain[iPhone Keychain] -->|HTTPSでBearerトークン| API[公開API関数]
+    Browser[ブラウザー] -->|トークンなしのGET| API
+    Secret[Secret Manager] -->|UPLOAD_TOKEN| API
+    API --> Check{変更時にトークン検証}
+    Check -->|一致| DB[(所有者データ)]
+    API --> Tasks[Cloud Tasks]
+    Tasks -->|OIDC IDトークン| IAM{Cloud Run IAM}
+    IAM -->|タスク用アカウントを許可| Worker[削除関数]
 ```
 
-- サンプルUUIDとバッチIDを固定し、再試行で重複させない。同じバッチIDで内容を変更すると409。
-- インポートごとの世代で制御。古い送信で削除済み世代を復活させない。
-- 削除済みUUIDの印を保持し、遅れて届く追加より削除を優先する。
-- キューとアンカーを一括保存。固定インポート範囲ごとに独立したアンカーを持つ。
-- 永続キューは完全なファイル保護を使い、バックアップから除外する。
-- 一時送信ファイルは初回ロック解除後に読み取り可能とし、ロック中のバックグラウンド転送に対応する。
-- トークンは初回ロック解除後に使える端末専用Keychainに保存。リダイレクトは拒否する。
-- 再起動時に転送を再接続。一時的な失敗は指数バックオフとランダムな遅延で再試行する。
-- 旧形式の時刻のみのデータはHealthKitから再取得。待機中の削除と正常なバッチIDは保持する。
-- HealthKitのバックグラウンド通知は保証されない。フォアグラウンドで追いつく。読み取り権限の拒否は判定できない。
+### 所有者トークン：iPhoneからAPIへ
+
+所有者がHTTPSのベースURLと共通のアップロードトークンを設定する。iPhoneはヘルスデータと分離し、Keychainの汎用パスワード（`com.kinn.Beatavue.cloud` / `upload-token`）として保存する。`AfterFirstUnlockThisDeviceOnly`により起動後の初回ロック解除後に利用でき、この端末専用になる。アプリは32文字以上を要求する。[URLの検証](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:285)、[Keychain保存](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:98)。初期設定で使うmacOS Keychainのコピーとは別で、iPhoneは自身のKeychain項目を読む。
+
+アップロードは`Authorization: Bearer <token>`を送る。インポートと削除の制御リクエストも一時セッションで同じヘッダーを使う。両経路ともHTTPリダイレクトを拒否し、設定先がトークン付きリクエストを別の宛先に転送することを防ぐ。[送信ヘッダー](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:519)、[制御リクエスト](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:572)、[リダイレクト拒否](/Users/kin/Documents/GitHub/Beatavue/mobile/ios/Beatavue/Beatavue/CloudSync.swift:178)。
+
+GCPではAPI用サービスアカウントにSecret Managerの読み取り権限を付け、指定バージョンを`UPLOAD_TOKEN`として注入する。Terraformは参照先とバージョンを保持し、値は別途登録する。[シークレット読取権限](/Users/kin/Documents/GitHub/Beatavue/infra/main.tf:97)、[シークレット注入](/Users/kin/Documents/GitHub/Beatavue/infra/main.tf:245)。
+
+APIは**処理ハンドラーを実行する前に**、`POST /v1/import`・`POST /v1/sync`・`DELETE /v1/data`を検証する。Bearerヘッダー全体を`hmac.compare_digest`で設定値と比較する。未指定、不一致、サーバー設定値が32文字未満の場合は401。[トークン比較](/Users/kin/Documents/GitHub/Beatavue/api/main.py:36)、[ルートの認証](/Users/kin/Documents/GitHub/Beatavue/api/main.py:133)。
+
+固定の共通シークレットであり、ログイン、更新用トークン、自動失効はない。更新時は新しいシークレットバージョンの作成、そのバージョンを使うデプロイ、iPhoneのトークン更新が必要。[セットアップ](setup-jp.md)を参照。
+
+### 公開取得と内部ID
+
+**公開閲覧：** Cloud RunはAPI関数の呼び出しを`allUsers`に許可し、Pythonのルート認証までリクエストを通す。対応するGETルートはトークン不要。公開サンプルからUUID、端末情報、非公開のソース識別子を除く。URLが分かれば公開測定値を閲覧できる。[公開APIのIAM](/Users/kin/Documents/GitHub/Beatavue/infra/main.tf:257)、[公開ルート](/Users/kin/Documents/GitHub/Beatavue/api/main.py:150)、[公開サンプルの項目](/Users/kin/Documents/GitHub/Beatavue/api/main.py:69)。
+
+**削除処理：** APIは`beatavue-tasks`のOIDC IDトークンと、削除関数URLを対象（audience）に指定したCloud Taskを登録する。実行前にCloud Run IAMがIDを検証し、Terraformがこのアカウントに呼び出し権限を付ける。所有者トークンは削除関数の認証情報として使わない。[OIDC付きタスク](/Users/kin/Documents/GitHub/Beatavue/api/main.py:93)、[タスクIDの使用権限](/Users/kin/Documents/GitHub/Beatavue/infra/main.tf:166)、[削除関数の呼出権限](/Users/kin/Documents/GitHub/Beatavue/infra/main.tf:208)。
+
+**データベース：** APIと削除関数は実行用サービスアカウントと`roles/datastore.user`を使う。ブラウザーとiPhoneはAPI経由でアクセスし、Firestoreルールはクライアントの直接読み書きを拒否する。クライアント向けルールとサーバーIAMは別で、サーバーSDKはIAMで認可される。[DBのIAM](/Users/kin/Documents/GitHub/Beatavue/infra/main.tf:47)、[サーバーSDKクライアント](/Users/kin/Documents/GitHub/Beatavue/api/repository.py:23)、[直接アクセス拒否ルール](/Users/kin/Documents/GitHub/Beatavue/infra/firestore.rules:4)。Firebase Authenticationは使わない。
 
 ## API
 
