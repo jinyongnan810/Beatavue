@@ -1,0 +1,61 @@
+name: Deploy Scope 2
+on:
+  workflow_dispatch:
+    inputs:
+      component:
+        description: Component to deploy after infrastructure bootstrap
+        type: choice
+        options: [all, api, web]
+        default: all
+      upload_token_version:
+        description: Existing numeric Secret Manager version (never the token value)
+        type: string
+        default: '1'
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: beatavue-gcp-deployment
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: gcp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - uses: hashicorp/setup-terraform@v3
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: beatavue
+      - name: Validate API
+        run: |
+          pip install -r api/requirements-dev.txt
+          python -m pytest -c api/pytest.ini api/tests -q
+      - name: Deploy API infrastructure and source
+        if: inputs.component != 'web'
+        env:
+          UPLOAD_TOKEN_VERSION: ${{ inputs.upload_token_version }}
+          BILLING_ACCOUNT: ${{ vars.GCP_BILLING_ACCOUNT }}
+        run: |
+          terraform -chdir=infra init -backend-config=backend.hcl.example
+          # Keep optional budget management consistent with the existing stack.
+          export TF_VAR_billing_account="$BILLING_ACCOUNT"
+          sh scripts/deploy-api.sh
+      - name: Deploy dashboard
+        if: inputs.component != 'api'
+        run: |
+          npm install --prefix "$RUNNER_TEMP/firebase-cli" firebase-tools@15.33.0
+          export PATH="$RUNNER_TEMP/firebase-cli/node_modules/.bin:$PATH"
+          sh scripts/deploy-web.sh
