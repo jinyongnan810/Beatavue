@@ -1,3 +1,8 @@
+export class HistoryError extends Error {
+  readonly status: number;
+  constructor(message: string, status: number) { super(message); this.status = status; }
+}
+
 export type Metric = 'heart_rate' | 'hrv_sdnn';
 export type Sample = { value: number; unit: string; start: string; end: string; source: string };
 export type Stats = { count: number; min: number | null; max: number | null; average: number | null };
@@ -26,7 +31,7 @@ export async function loadHistory(params: Record<string, string>, raw: boolean, 
       if (!samples.length) ingestion = page.last_ingestion;
       samples.push(...page.samples);
       cursor = page.next_cursor;
-      if (samples.length > 20000 || (samples.length === 20000 && cursor)) throw new Error('Too many samples to display.');
+      if (samples.length > 20000 || (samples.length === 20000 && cursor)) throw new HistoryError('Too many samples to display.', 0);
     } while (cursor);
     let min: number | null = null;
     let max: number | null = null;
@@ -61,7 +66,7 @@ export async function get<T>(path: string, params: Record<string, string>, signa
       429: 'The public API is busy. Please try again shortly.',
       503: 'Cloud data is temporarily unavailable. Please try again.',
     };
-    throw new Error(messages[response.status] ?? `Could not load history (${response.status}).`);
+    throw new HistoryError(messages[response.status] ?? `Could not load history (${response.status}).`, response.status);
   }
   return response.json() as Promise<T>;
 }

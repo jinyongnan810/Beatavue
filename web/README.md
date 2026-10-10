@@ -11,3 +11,5 @@ flowchart LR
 ```
 
 [Source](src/)
+
+The dashboard supports English and Japanese, defaults to the browser language, and remembers the language selected in the header.
