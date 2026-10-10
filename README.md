@@ -1,13 +1,16 @@
 # Beatavue
 
-An iPhone and Apple Watch heart-rate/HRV journal with optional public cloud publishing.
+[日本語](README-jp.md) · [Tech](tech.md) · [Setup](setup.md) · [Web](https://beatavue.web.app)
 
-- [Project specification](spec.md)
-- [iOS and Watch setup](mobile/ios/Beatavue/README.md)
-- [API contract and local development](api/README.md)
-- [GCP bootstrap and deployment](infra/README.md)
-- [Dashboard development](web/README.md)
+Heart history. iPhone, Watch, web.
 
-Scope 2 targets the existing GCP project **beatavue**, number **256425564793**.
-Publishing is disabled by default. No health data or upload token is included in this repository.
-The serverless API and dashboard must be deployed before enabling publishing on a device.
+```mermaid
+flowchart LR
+    M[mobile · Capture] --> A[api · Share]
+    A --> W[web · View]
+    I[infra · Host] -.-> A
+    I -.-> W
+    S[scripts · Deploy] -.-> I
+```
+
+[Mobile](mobile/ios/Beatavue/README.md) · [API](api/README.md) · [Web](web/README.md) · [Infra](infra/README.md) · [Scripts](scripts/)
