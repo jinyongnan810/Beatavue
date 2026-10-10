@@ -2,8 +2,27 @@
 
 Existing project: **beatavue**, number **256425564793**. Terraform validates both identities.
 Default region: **asia-northeast1 (Tokyo)**. Do not create a new project.
-The implementation has been validated locally but is **not deployed**. GCP application-default
-credentials were unavailable in the implementation environment.
+Deployed on **2026-10-10** in Tokyo. The remote state is in the private, versioned
+`beatavue-terraform-state` bucket. A follow-up Terraform plan reported **no changes**.
+
+- Dashboard and same-origin API base: [beatavue.web.app](https://beatavue.web.app).
+- Direct API base: [beatavue-api-r4x2cqmxbq-an.a.run.app](https://beatavue-api-r4x2cqmxbq-an.a.run.app).
+- Upload token: Secret Manager `beatavue-upload-token`, pinned version `1`. The owner's
+  copy is saved in macOS Keychain as **Beatavue upload token**, account **owner**. Retrieve
+  it in Keychain Access and enter it in the iPhone's cloud connection SecureField; never
+  paste it into chat or commit it.
+
+Live synthetic checks passed for mutation authentication, ingestion, idempotent retries,
+conflicting batch IDs, pagination with the production index, both metrics, summaries,
+public field privacy, tombstones, deletion fencing, Cloud Tasks OIDC cleanup, receipt/sample
+purging, retired generations, and private worker IAM. Hosting API routing and anonymous
+Firestore denial also passed. The synthetic generation was removed; no personal health data
+was uploaded. The dashboard currently shows its empty state. The token was absent from the
+built web assets and the 35 runtime log entries sampled during verification.
+
+Physical-device sync acceptance and token-rotation acceptance remain pending. Monitoring
+has no external notification channel, and the optional billing budget is not configured.
+The ignored `infra/terraform.tfvars` retains the deployed source object and secret version.
 
 ## 1. Authenticate and inspect existing resources
 
@@ -14,6 +33,8 @@ do not create or commit service-account JSON keys.
 ```sh
 gcloud auth login
 gcloud auth application-default login
+gcloud auth application-default set-quota-project beatavue
+gcloud services enable cloudresourcemanager.googleapis.com cloudbilling.googleapis.com --project beatavue
 gcloud projects describe beatavue --format='value(projectNumber)'
 gcloud billing projects describe beatavue
 gcloud firestore databases list --project beatavue
@@ -27,6 +48,8 @@ and import it into Terraform instead of creating another database. Inspect exist
 service accounts, buckets, task queues, and indexes too; import matching resources before apply.
 Do not overwrite existing Firestore rules if the project contains other applications without
 reconciling their rules first. The supplied deny-all rules assume Beatavue owns this database.
+The Terraform provider explicitly uses `beatavue` as its billing/quota project, so another
+project saved in ADC settings does not redirect infrastructure API quota requests.
 
 ## 2. Bootstrap remote state and Firebase Hosting
 

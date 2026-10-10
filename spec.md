@@ -1,6 +1,6 @@
 # Beatavue — Project Specification
 
-Status: Scope 1 implemented; Scope 2 implemented locally, deployment and device acceptance pending
+Status: Scope 1 implemented; Scope 2 deployed to GCP, physical-device acceptance pending
 Updated: 2026-10-10
 
 ## Purpose
@@ -254,4 +254,6 @@ Synchronize deletions with tombstones: deletion always wins for a UUID within an
 
 ## Scope 2 implementation and verification status
 
-The repository contains the API, Terraform, deployment helpers, public dashboard, and iOS opt-in/background-sync integration. Local checks cover API contract/persistence behavior, Firestore SDK integration against the emulator (including concurrent retries and pagination), the React production build, Terraform schema validation, and the iOS/Watch build. These checks do not verify cloud IAM, Firestore indexes/transaction contention, Firebase routing, or physical-device background delivery. No live infrastructure has been provisioned by the implementation task because GCP application-default credentials were unavailable. Follow `infra/README.md` for bootstrap, deployment, and live verification; do not claim the public dashboard is deployed until those steps succeed.
+The repository contains the API, Terraform, deployment helpers, public dashboard, and iOS opt-in/background-sync integration. Local checks cover API contract/persistence behavior, Firestore SDK integration against the emulator (including concurrent retries and pagination), the React production build, Terraform schema validation, and the iOS/Watch build.
+
+Scope 2 was deployed to project `beatavue` in `asia-northeast1` on 2026-10-10. The public dashboard is available at https://beatavue.web.app. Terraform uses private versioned GCS remote state, and the post-deployment plan reported no changes. Live checks with synthetic samples verified private mutation authentication, ingestion, retries and conflicting IDs, production-index pagination, both metrics, summaries, public field privacy, tombstones, immediate deletion fencing, delayed upload rejection, Cloud Tasks OIDC cleanup, sample/receipt purging, retired generations, and private worker IAM. Hosting routing and anonymous Firestore denial passed. The synthetic generation was removed; no personal health data was uploaded. The token was absent from the React assets and sampled runtime logs. Physical-device background delivery, token rotation, production contention/load behavior, and notification delivery remain unverified. See `infra/README.md` for endpoints, owner token provisioning, deployment settings, and the remaining acceptance checks.
