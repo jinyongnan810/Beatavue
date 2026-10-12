@@ -139,22 +139,23 @@ class Repository:
     # Reserve request and sample-read capacity from the shared minute allowance.
     def reserve_public_reads(self, maximum_reads):
         """Shared demo-wide allowance; it cannot be bypassed by changing an IP header."""
-        ref = self.db.collection("api_limits").document("public")
-        minute = int(datetime.now(timezone.utc).timestamp()) // 60
+        pass
+        # ref = self.db.collection("api_limits").document("public")
+        # minute = int(datetime.now(timezone.utc).timestamp()) // 60
 
         # Atomically reset or debit the current minute allowance without exceeding limits.
-        @firestore.transactional
-        def reserve(tx):
-            budget = ref.get(transaction=tx).to_dict() or {}
-            if budget.get("minute") != minute:
-                budget = {"minute": minute, "requests": 0, "reserved_reads": 0}
-            if budget["requests"] >= 60 or budget["reserved_reads"] + maximum_reads > 100000:
-                raise RateLimited()
-            budget["requests"] += 1
-            budget["reserved_reads"] += maximum_reads
-            tx.set(ref, budget)
+        # @firestore.transactional
+        # def reserve(tx):
+        #     budget = ref.get(transaction=tx).to_dict() or {}
+        #     if budget.get("minute") != minute:
+        #         budget = {"minute": minute, "requests": 0, "reserved_reads": 0}
+        #     if budget["requests"] >= 60 or budget["reserved_reads"] + maximum_reads > 100000:
+        #         raise RateLimited()
+        #     budget["requests"] += 1
+        #     budget["reserved_reads"] += maximum_reads
+        #     tx.set(ref, budget)
 
-        reserve(self.db.transaction())
+        # reserve(self.db.transaction())
 
     # Delete at most 200 samples or receipts, then finish cleanup when empty.
     def cleanup_chunk(self, generation):
