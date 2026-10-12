@@ -1,6 +1,6 @@
 # Setup and deployment
 
-[日本語](setup-jp.md) · [Folders](README.md) · [Tech](tech.md)
+[日本語](setup-jp.md) · [Folders](README-en.md) · [Tech](tech.md)
 
 Run commands from the repository root unless stated otherwise.
 Existing project: **beatavue / 256425564793**, Tokyo. It is already deployed.

@@ -1,14 +1,14 @@
 # mobile/ios/Beatavue/
 
-[日本語](README-jp.md) · [Tech](../../../tech.md) · [Setup](../../../setup.md)
+[English](README-en.md) · [技術](../../../tech-jp.md) · [セットアップ](../../../setup-jp.md)
 
-History on iPhone. Live heart rate on Watch.
+iPhoneで履歴。Watchでリアルタイム心拍。
 
 ```mermaid
 flowchart LR
-    Health[Apple Health] --> Phone[iPhone · History]
-    Watch[Watch · Live] --> Phone
-    Phone -.->|Optional publishing| Web[Web]
+    Health[Appleヘルスケア] --> Phone[iPhone · 履歴]
+    Watch[Watch · リアルタイム] --> Phone
+    Phone -.->|任意で公開| Web[Web]
 ```
 
 [iPhone](Beatavue/) · [Watch](<Beatavue Watch Watch App/>) · [Xcode](Beatavue.xcodeproj/)

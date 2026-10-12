@@ -1,6 +1,6 @@
 # Technical notes
 
-[日本語](tech-jp.md) · [Folders](README.md) · [Setup](setup.md)
+[日本語](tech-jp.md) · [Folders](README-en.md) · [Setup](setup.md)
 
 ## Architecture
 

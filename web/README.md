@@ -1,15 +1,14 @@
 # web/
 
-[日本語](README-jp.md) · [Tech](../tech.md) · [Setup](../setup.md) · [Open](https://beatavue.web.app)
+[English](README-en.md) · [技術](../tech-jp.md) · [セットアップ](../setup-jp.md) · [開く](https://beatavue.web.app)
 
-Public heart-rate and HRV history.
+心拍数・HRVの履歴を公開。
 
 ```mermaid
 flowchart LR
-    API[History] --> UI[src/ · Dashboard]
-    UI --> Visitor[Anyone]
+    API[履歴] --> UI[src/ · ダッシュボード]
+    UI --> Visitor[誰でも閲覧]
 ```
 
-[Source](src/)
+[ソース](src/)
 
-The dashboard supports English and Japanese, defaults to the browser language, and remembers the language selected in the header.

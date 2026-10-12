@@ -1,14 +1,14 @@
 # api/
 
-[日本語](README-jp.md) · [Tech](../tech.md) · [Setup](../setup.md)
+[English](README-en.md) · [技術](../tech-jp.md) · [セットアップ](../setup-jp.md)
 
-Health data. Upload, read, delete.
+健康データの送信・取得・削除。
 
 ```mermaid
 flowchart LR
-    Phone[iPhone] -->|Upload| API[api/]
-    API -->|History| Web[Web]
-    API -->|Delete| Cleanup[Cleanup]
+    Phone[iPhone] -->|送信| API[api/]
+    API -->|履歴| Web[Web]
+    API -->|削除| Cleanup[削除処理]
 ```
 
-[Checks](tests/)
+[検証](tests/)

@@ -1,21 +1,26 @@
 # Beatavue
 
-[日本語](README-jp.md) · [Tech](tech.md) · [Setup](setup.md) · [Web](https://beatavue.web.app)
+[English](README-en.md) · [技術](tech-jp.md) · [セットアップ](setup-jp.md) · [Web](https://beatavue.web.app)
 
-Beatavue helps view the heart rate and heart-rate variability (HRV) on iPhone and the web.
+Beatavueは、iPhoneとWebで心拍数と心拍変動（HRV）を確認できるアプリです。
 
-- **iPhone:** View history from Apple Health.
-- **Apple Watch:** See live heart rate from a Watch workout on iPhone.
-- **Web:** Share history through a public dashboard with day, week, and month views. 
+- **iPhone:** Appleヘルスケアに記録された履歴を表示します。
+- **Apple Watch:** ワークアウト中のリアルタイム心拍数をiPhoneで確認できます。
+- **Web:** 日・週・月単位で表示できる公開ダッシュボードを通じて履歴を共有します。
 
-## Main purpose
+## 確認できたこと
 
-Check HealthKit automatically triggers app when new heart rate or heart-rate variability (HRV) data is available. And the app can fetch and upload the data to server without launching.
+- 新しい心拍数や心拍変動（HRV）のデータが利用可能になったときに、HealthKitがアプリを自動的に起動し、アプリを手動で開かなくてもデータを取得してサーバーにアップロードできる。
+- Apple Watchでワークアウト中のリアルタイム心拍数をiPhoneで確認できる。
+- Apple Watchの場合
+  - ワークアウト中は頻繁に心拍数が更新される。
+  - ワークアウトしていない場合、およそ5分に一回心拍数が更新される。(Series 12の場合はもっと頻繁かもしれない)
+  - HRVは2時間に一回更新される。
 
-## In this repository
+## リポジトリの構成
 
-- [Mobile](mobile/ios/Beatavue/README.md) — iPhone and Apple Watch apps built with SwiftUI.
-- [API](api/README.md) — Python service that stores and serves history using Firestore.
-- [Web](web/README.md) — React and TypeScript dashboard.
-- [Infra](infra/README.md) — Terraform configuration for cloud hosting.
-- [Scripts](scripts/) — Deployment tools.
+- [モバイル](mobile/ios/Beatavue/README.md) — SwiftUIで作成したiPhone・Apple Watchアプリ。
+- [API](api/README.md) — Firestoreを使って履歴を保存・配信するPythonサービス。
+- [Web](web/README.md) — ReactとTypeScriptで作成したダッシュボード。
+- [基盤](infra/README.md) — クラウドホスティングのTerraform設定。
+- [スクリプト](scripts/) — デプロイ用ツール。
