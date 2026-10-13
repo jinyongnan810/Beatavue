@@ -10,4 +10,5 @@ terraform -chdir=infra plan \
   -var="deploy_functions=true" -var="source_object=$OBJECT" \
   -var="upload_token_version=${UPLOAD_TOKEN_VERSION:-1}" -out=deployment.tfplan
 terraform -chdir=infra apply deployment.tfplan
+firebase deploy --only database --project beatavue
 echo "Persist deploy_functions, source_object and upload_token_version in your ignored terraform.tfvars for future plans."

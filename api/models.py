@@ -79,3 +79,44 @@ class ImportRequest(Model):
 class DeleteRequest(Model):
     deletion_id: UUID
     generation: UUID
+
+
+class LiveUpdate(Model):
+    generation: UUID
+    session_id: UUID
+    started_at: datetime
+    sent_at: datetime
+    updating: bool = Field(strict=True)
+    heart_rate: float | None = Field(default=None, gt=0, le=400)
+    measured_at: datetime | None = None
+
+    @field_validator("started_at", "sent_at", "measured_at")
+    @classmethod
+    def utc(cls, value):
+        if value is None:
+            return value
+        if value.tzinfo is None:
+            raise ValueError("Timezone required")
+        return value.astimezone(timezone.utc)
+
+    @model_validator(mode="after")
+    def consistent(self):
+        now = datetime.now(timezone.utc)
+        if not -30 <= (now - self.sent_at).total_seconds() <= 60:
+            raise ValueError("Expired live update")
+        if self.started_at > self.sent_at:
+            raise ValueError("Invalid workout start")
+        if self.updating:
+            if self.heart_rate is None or self.measured_at is None:
+                raise ValueError("A live reading needs a value and timestamp")
+            if not self.started_at <= self.measured_at <= self.sent_at:
+                raise ValueError("Invalid measurement time")
+            if (now - self.measured_at).total_seconds() > 30:
+                raise ValueError("Expired measurement")
+        elif self.heart_rate is not None or self.measured_at is not None:
+            raise ValueError("Inactive updates must clear the reading")
+        return self
+
+
+class LiveClearRequest(Model):
+    generation: UUID

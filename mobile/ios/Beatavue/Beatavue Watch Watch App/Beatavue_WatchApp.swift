@@ -17,6 +17,10 @@ struct Beatavue_Watch_Watch_AppApp: App {
 
 /// Handles system requests to recover an active Watch workout.
 final class WorkoutAppDelegate: NSObject, WKApplicationDelegate {
+    func applicationDidFinishLaunching() {
+        Task { @MainActor in LiveUpload.shared.start() }
+    }
+
     /// Asks the shared workout model to recover the active HealthKit session.
     func handleActiveWorkoutRecovery() {
         Task { await WatchWorkout.shared.recover() }

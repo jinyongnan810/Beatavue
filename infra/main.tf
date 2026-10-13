@@ -13,7 +13,7 @@ locals {
     "cloudresourcemanager.googleapis.com", "cloudbilling.googleapis.com",
     "cloudfunctions.googleapis.com", "run.googleapis.com", "cloudbuild.googleapis.com",
     "artifactregistry.googleapis.com", "firestore.googleapis.com", "secretmanager.googleapis.com",
-    "cloudtasks.googleapis.com", "firebase.googleapis.com", "firebasehosting.googleapis.com",
+    "cloudtasks.googleapis.com", "firebasedatabase.googleapis.com", "firebase.googleapis.com", "firebasehosting.googleapis.com",
     "firebaserules.googleapis.com", "iam.googleapis.com", "logging.googleapis.com",
     "monitoring.googleapis.com", "billingbudgets.googleapis.com", "storage.googleapis.com"
   ])
@@ -237,10 +237,11 @@ resource "google_cloudfunctions2_function" "api" {
     timeout_seconds                  = 55
     service_account_email            = google_service_account.api.email
     environment_variables = {
-      GOOGLE_CLOUD_PROJECT = var.project_id
-      REGION               = var.region
-      CLEANUP_URL          = google_cloudfunctions2_function.cleanup[0].service_config[0].uri
-      TASK_SERVICE_ACCOUNT = google_service_account.tasks.email
+      GOOGLE_CLOUD_PROJECT  = var.project_id
+      REALTIME_DATABASE_URL = google_firebase_database_instance.live.database_url
+      REGION                = var.region
+      CLEANUP_URL           = google_cloudfunctions2_function.cleanup[0].service_config[0].uri
+      TASK_SERVICE_ACCOUNT  = google_service_account.tasks.email
     }
     secret_environment_variables {
       key        = "UPLOAD_TOKEN"
@@ -250,7 +251,7 @@ resource "google_cloudfunctions2_function" "api" {
     }
   }
   depends_on = [google_project_service.apis, google_secret_manager_secret_iam_member.upload,
-    google_project_iam_member.database, google_project_iam_member.build_logs, google_project_iam_member.managed_build_source,
+    google_project_iam_member.database, google_project_iam_member.realtime, google_project_iam_member.build_logs, google_project_iam_member.managed_build_source,
     google_storage_bucket_iam_member.build_source, google_artifact_registry_repository_iam_member.builder,
   google_cloud_run_service_iam_member.cleanup_invoker, google_service_account_iam_member.task_identity]
 }
@@ -296,4 +297,28 @@ resource "google_monitoring_alert_policy" "errors" {
     }
   }
   depends_on = [google_project_service.apis]
+}
+
+# Realtime Database is an ephemeral current-value cache; browser access is denied.
+# Deploy infra/database.rules.json using Firebase CLI (RTDB rules have no Terraform resource).
+resource "google_firebase_database_instance" "live" {
+  provider    = google-beta
+  project     = var.project_id
+  region      = "asia-southeast1"
+  instance_id = "beatavue-default-rtdb"
+  type        = "DEFAULT_DATABASE"
+  depends_on  = [google_project_service.apis]
+  lifecycle { prevent_destroy = true }
+}
+resource "google_project_iam_custom_role" "realtime_data" {
+  project     = var.project_id
+  role_id     = "beatavueRealtimeData"
+  title       = "Beatavue realtime data access"
+  description = "Read and update existing RTDB data; no instance creation, deletion, listing or lifecycle administration."
+  permissions = ["firebasedatabase.instances.get", "firebasedatabase.instances.update"]
+}
+resource "google_project_iam_member" "realtime" {
+  project = var.project_id
+  role    = google_project_iam_custom_role.realtime_data.name
+  member  = "serviceAccount:${google_service_account.api.email}"
 }

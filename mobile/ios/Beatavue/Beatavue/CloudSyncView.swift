@@ -25,6 +25,13 @@ struct CloudSyncView: View {
             }.disabled(!sync.ready || sync.working)
             Text("Changing the endpoint resets local sync and requires a new publishing confirmation. A blank token keeps the existing Keychain token.")
                 .font(.caption).foregroundStyle(.secondary)
+            Toggle("Publish live workout heart rate", isOn: Binding(
+                get: { sync.state.liveEnabled == true },
+                set: { sync.setLivePublishing($0) }
+            ))
+            .disabled(!sync.ready || sync.working)
+            Text("When publishing is enabled, live workout heart rate is visible to anyone on the web. The Watch receives upload credentials from this iPhone.")
+                .font(.caption).foregroundStyle(.secondary)
             LabeledContent("Publishing", value: sync.state.enabled ? String(localized: "Enabled") : String(localized: "Disabled"))
             LabeledContent("Pending changes", value: sync.pendingCount.formatted())
             if let date = sync.state.lastUpload {

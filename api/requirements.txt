@@ -2,3 +2,5 @@ functions-framework==3.10.2
 google-cloud-firestore==2.34.1
 google-cloud-tasks==2.26.0
 pydantic==2.14.0
+google-auth==2.61.0
+requests==2.32.5

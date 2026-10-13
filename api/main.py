@@ -15,7 +15,9 @@ from google.api_core.exceptions import AlreadyExists
 from google.cloud import tasks_v2
 from pydantic import ValidationError
 
-from models import DeleteRequest, ImportRequest, SyncBatch
+from models import DeleteRequest, ImportRequest, LiveClearRequest, LiveUpdate, SyncBatch
+from realtime import Realtime
+from flask import Response
 from repository import Conflict, RateLimited, Repository
 
 MAX_BODY = 256 * 1024
@@ -26,6 +28,11 @@ MAX_SUMMARY_SAMPLES = 20000
 @lru_cache
 def repository():
     return Repository()
+
+
+@lru_cache
+def realtime():
+    return Realtime()
 
 
 # Return a JSON response with cache and content-type safety headers.
@@ -143,10 +150,31 @@ def api(request):
     if request.content_length and request.content_length > MAX_BODY:
         return response({"error": "payload_too_large"}, 413)
     path = request.path.rstrip("/")
-    private = {("POST", "/v1/sync"), ("POST", "/v1/import"), ("DELETE", "/v1/data")}
+    private = {("POST", "/v1/live/clear"), ("POST", "/v1/live"), ("POST", "/v1/sync"), ("POST", "/v1/import"), ("DELETE", "/v1/data")}
     if (request.method, path) in private and not authorized(request):
         return response({"error": "unauthorized"}, 401)
     try:
+        if request.method == "POST" and path == "/v1/live/clear":
+            realtime().clear(str(body(request, LiveClearRequest).generation))
+            return response({"cleared": True})
+        if request.method == "POST" and path == "/v1/live":
+            update = body(request, LiveUpdate)
+            repo = repository()
+            state = repo.status()
+            if not state.get("enabled") or state.get("generation") != str(update.generation):
+                raise Conflict("Publication is disabled or generation is stale")
+            realtime().update(update)
+            # Close a race with deletion after validation but before the RTDB write.
+            current = repo.status()
+            if not current.get("enabled") or current.get("generation") != str(update.generation):
+                realtime().clear(str(update.generation))
+                raise Conflict("Publication changed")
+            return response({"accepted": True})
+        if request.method == "GET" and path == "/v1/live":
+            return Response(realtime().events(repository().status), mimetype="text/event-stream",
+                            headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no",
+                                     "Access-Control-Allow-Origin": "*",
+                                     "X-Content-Type-Options": "nosniff"})
         repo = repository()
         if request.method == "POST" and path == "/v1/import":
             return response(repo.begin_import(body(request, ImportRequest).import_id))
@@ -156,6 +184,8 @@ def api(request):
             return response(repo.sync(batch, hashlib.sha256(canonical.encode()).hexdigest()))
         if request.method == "DELETE" and path == "/v1/data":
             state = repo.begin_delete(body(request, DeleteRequest))
+            if os.environ.get("REALTIME_DATABASE_URL"):
+                realtime().clear(str(state["generation"]))
             if state["cleanup_pending"]:
                 enqueue_cleanup(state)
             return response({"deletion_id": state["deletion_id"], "cleanup_pending": state["cleanup_pending"]},

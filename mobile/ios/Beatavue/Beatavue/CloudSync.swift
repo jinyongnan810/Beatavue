@@ -60,6 +60,7 @@ nonisolated struct CloudState: Codable, Equatable, Sendable {
     var version = 1
     var endpoint = "https://beatavue.web.app"
     var enabled = false
+    var liveEnabled: Bool?
     var generation: UUID?
     var importID: UUID?
     var deletionID: UUID?
@@ -234,6 +235,7 @@ final class CloudSync {
             }
             ready = true
             registerObservers()
+            LiveConnection.shared.synchronize()
             Task {
                 let tasks = await transfers.session.allTasks
                 // Adopt an existing transfer before scheduling another after relaunch.
@@ -258,6 +260,18 @@ final class CloudSync {
         }
     }
 
+    func setLivePublishing(_ enabled: Bool) {
+        do {
+            var next = state
+            next.liveEnabled = enabled
+            try save(next)
+            if !enabled, let generation = next.generation {
+                Task { try? await control("/v1/live/clear", method: "POST", fields: ["generation": generation.uuidString]) }
+            }
+            error = nil
+        } catch { self.error = "Could not save live publishing settings." }
+    }
+
     func handleBackgroundEvents(_ completion: @escaping () -> Void) {
         backgroundCompletion = completion
         start()
@@ -280,6 +294,7 @@ final class CloudSync {
         let data = try JSONEncoder().encode(next)
         try data.write(to: directory().appendingPathComponent("state.json"), options: [.atomic, .completeFileProtection])
         state = next
+        LiveConnection.shared.synchronize()
     }
 
     func configure(endpoint: String, token: String) async {
@@ -296,6 +311,7 @@ final class CloudSync {
                 cancelWork()
             }
             if !token.isEmpty { try CloudToken.write(token) }
+            LiveConnection.shared.synchronize()
             error = nil
             await syncNow()
         } catch { self.error = error.localizedDescription }
@@ -339,6 +355,9 @@ final class CloudSync {
             next.enabled = false
             try save(next)
             cancelWork()
+            if let generation = next.generation {
+                Task { try? await control("/v1/live/clear", method: "POST", fields: ["generation": generation.uuidString]) }
+            }
             error = nil
         } catch { self.error = "Could not pause sync. Unlock your iPhone and retry." }
     }
@@ -593,6 +612,7 @@ final class CloudSync {
 final class CloudAppDelegate: NSObject, UIApplicationDelegate {
     func application(_: UIApplication, didFinishLaunchingWithOptions _: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         CloudSync.shared.start()
+        LiveConnection.shared.start()
         return true
     }
 

@@ -51,6 +51,16 @@
         }
       }
     },
+    "Could not save live publishing credentials.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リアルタイム公開の認証情報を保存できませんでした。"
+          }
+        }
+      }
+    },
     "Could not save: %@": {
       "localizations": {
         "ja": {
@@ -67,6 +77,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "終了"
+          }
+        }
+      }
+    },
+    "Live publishing delayed. Recording continues on Watch.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リアルタイム公開が遅れています。Watchでの記録は継続しています。"
+          }
+        }
+      }
+    },
+    "Live publishing enabled": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リアルタイム公開が有効"
           }
         }
       }

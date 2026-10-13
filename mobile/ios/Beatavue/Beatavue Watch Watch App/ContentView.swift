@@ -23,6 +23,10 @@ struct ContentView: View {
                 if let error = workout.error {
                     Text(error).font(.caption).foregroundStyle(.orange)
                 }
+                if let error = LiveUpload.shared.error {
+                    Text(error).font(.caption).foregroundStyle(.orange)
+                }
+                if LiveUpload.shared.enabled { Text("Live publishing enabled").font(.caption2) }
                 if workout.saved { Text("Saved to Health").font(.caption) }
             }
             .padding(.horizontal)

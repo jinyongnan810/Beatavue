@@ -76,3 +76,11 @@ flowchart TB
 
 名前付きの資源とIAM権限をTerraformで作成。Cloud BuildジョブとCloud LoggingはGCP管理の
 サービス。状態、Hosting、トークン値は別途準備する。予算は任意。
+
+## Realtime Database
+
+`beatavue-default-rtdb`（`asia-southeast1`）は現在のワークアウト状態だけを保持します。
+Firestoreと同様に直接アクセスを拒否し、APIサービスアカウントだけがIAMでアクセスします。
+Terraformはインスタンス・API有効化・IAM・関数環境変数を管理します。
+RTDBルールはTerraformで管理できないため、`firebase deploy --only database --project beatavue` で
+`database.rules.json` を配備します（`scripts/deploy-api.sh` に含まれます）。

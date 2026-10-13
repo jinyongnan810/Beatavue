@@ -153,6 +153,17 @@
         }
       }
     },
+    "Could not save live publishing settings." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リアルタイム公開の設定を保存できませんでした。"
+          }
+        }
+      }
+    },
     "Day" : {
       "localizations" : {
         "ja" : {
@@ -553,6 +564,16 @@
         }
       }
     },
+    "Publish live workout heart rate" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ワークアウトのリアルタイム心拍数を公開"
+          }
+        }
+      }
+    },
     "Publish older history" : {
       "localizations" : {
         "ja" : {
@@ -900,6 +921,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "週"
+          }
+        }
+      }
+    },
+    "When publishing is enabled, live workout heart rate is visible to anyone on the web. The Watch receives upload credentials from this iPhone." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "公開が有効な場合、ワークアウト中の心拍数はWebで誰でも閲覧できます。アップロード認証情報はこのiPhoneからWatchへ転送されます。"
           }
         }
       }

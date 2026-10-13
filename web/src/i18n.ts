@@ -6,6 +6,8 @@ export function resolveLanguage(saved: string | null, preferred: readonly string
 }
 
 const en = {
+  liveEyebrow: 'From Apple Watch', liveTitle: 'Live heart rate', liveNote: 'Only the current workout reading is shown. Paused, ended, or stale readings are hidden.',
+  liveUpdating: 'Updating live', liveInactive: 'No live reading', liveConnecting: 'Connecting to live readings…',
   language: 'Language', badge: 'Personal health journal', eyebrow: 'A little closer to the rhythm',
   title: 'Heart history,', titleEmphasis: 'at a glance.',
   introduction: 'One person’s Apple Health measurements. Shared openly, with room for the gaps.',
@@ -17,7 +19,7 @@ const en = {
   note: 'Averages give equal weight to available samples. Measurements are intermittent; gaps do not imply continuous recording. Overlapping sources are retained.',
   latest: 'Latest in this period', noMeasurement: 'No measurement', choosePeriod: 'Choose a period with published samples.',
   ingestion: 'Last server ingestion', noUpload: 'No upload yet', uploadNote: 'Recent device measurements may not have uploaded yet.',
-  footer: 'Beatavue · Historical measurements, not medical guidance. HRV is SDNN in milliseconds. Live workout readings stay on the iPhone and Watch.',
+  footer: 'Beatavue · Historical measurements, not medical guidance. HRV is SDNN in milliseconds. Live workout readings are shared when live publishing is enabled.',
   emptyTitle: 'No published measurements', emptyNote: 'Try another date. New device readings may still be waiting to upload.',
   inspect: 'Select a point to inspect its value and time.', sampleAverages: 'Sample averages', measuredSamples: 'Measured samples',
   chartLabel: (label: string, unit: string) => `${label} in ${unit}`,
@@ -34,6 +36,8 @@ const en = {
   statusError: (status: number) => `Could not load history (${status}).`,
 };
 const ja: typeof en = {
+  liveEyebrow: 'Apple Watchから', liveTitle: 'リアルタイム心拍数', liveNote: '現在のワークアウトの測定値を表示します。一時停止・終了時や古い測定値は表示されません。',
+  liveUpdating: 'リアルタイム更新中', liveInactive: 'リアルタイム測定値なし', liveConnecting: 'リアルタイム測定値に接続中…',
   language: '言語', badge: '個人の健康記録', eyebrow: 'からだのリズムを、もっと身近に',
   title: '心拍の記録を、', titleEmphasis: 'ひと目で。',
   introduction: 'Appleヘルスケアに記録された、ある一人の測定データ。測定のない時間も含めて公開しています。',
@@ -45,7 +49,7 @@ const ja: typeof en = {
   note: '平均値は各測定値を同じ重みで計算しています。測定は断続的に行われ、空白の期間は連続測定を意味しません。複数のソースによる重複した測定値も含まれます。',
   latest: 'この期間の最新の測定値', noMeasurement: '測定値なし', choosePeriod: '測定値が公開されている期間を選んでください。',
   ingestion: 'サーバーへの最終取り込み', noUpload: 'アップロードなし', uploadNote: '端末の最新の測定値は、まだアップロードされていない場合があります。',
-  footer: 'Beatavue · 過去の測定記録であり、医療上の助言ではありません。心拍変動はSDNNをミリ秒で表示しています。ワークアウト中のリアルタイム測定値はiPhoneとApple Watch内に保存されます。',
+  footer: 'Beatavue · 過去の測定記録であり、医療上の助言ではありません。心拍変動はSDNNをミリ秒で表示しています。リアルタイム公開を有効にすると、ワークアウト中の測定値も共有されます。',
   emptyTitle: '公開された測定値がありません', emptyNote: '別の日付を選んでください。端末の新しい測定値は、アップロード待ちの場合があります。',
   inspect: '点を選ぶと、測定値と時刻を確認できます。', sampleAverages: '測定値の平均', measuredSamples: '測定値',
   chartLabel: (label, unit) => `${label}（単位：${unit}）`,

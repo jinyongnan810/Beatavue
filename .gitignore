@@ -15,3 +15,6 @@ build/
 *.tsbuildinfo
 gha-creds-*.json
 .DS_Store
+
+# Public live-stream URL only; contains no credentials.
+!web/.env.production

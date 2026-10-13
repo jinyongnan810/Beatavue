@@ -4,6 +4,7 @@ import { DateTime } from 'luxon';
 import { clearHistoryCache, HistoryError, loadHistory, type Bucket, type Metric, type Sample, type Summary } from './api';
 import { dateFormats, languageStorageKey, resolveLanguage, translations, type Language } from './i18n';
 import './style.css';
+import { LiveHeartRate } from './LiveHeartRate';
 
 type Period = 'day' | 'week' | 'month';
 type Point = { time: string; value: number; detail: string };
@@ -107,6 +108,7 @@ function App() {
   return <main>
     <header><a className="brand" href="/">♡ <span>Beatavue</span></a><div className="header-actions"><span className="badge">{t.badge}</span><select aria-label={t.language} value={language} onChange={event => setLanguage(event.target.value as Language)}><option value="en" lang="en">English</option><option value="ja" lang="ja">日本語</option></select></div></header>
     <section className="intro"><p className="eyebrow">{t.eyebrow}</p><h1>{t.title}<br /><em>{t.titleEmphasis}</em></h1><p>{t.introduction}</p></section>
+    <LiveHeartRate language={language} zone={zone} />
     <section className="panel" aria-label={t.controls}>
       <div className="controls"><div className="segments">{(['heart_rate', 'hrv_sdnn'] as Metric[]).map(value => <button key={value} aria-pressed={metric === value} onClick={() => setMetric(value)}>{t[value]}</button>)}</div><button className="refresh" onClick={refresh} disabled={loading}>↻ {t.refresh}</button></div>
       <div className="navigation"><div className="segments periods">{(['day', 'week', 'month'] as Period[]).map(value => <button key={value} aria-pressed={period === value} onClick={() => setPeriod(value)}>{t[value]}</button>)}</div><div className="date"><button aria-label={t.previous} onClick={() => move(-1)}>‹</button><input type="date" aria-label={t.selectedDate} value={date} max={DateTime.now().setZone(zone).toISODate()!} onChange={event => { if (event.target.value) setDate(event.target.value); }} /><button aria-label={t.next} disabled={range.end.toMillis() > Date.now()} onClick={() => move(1)}>›</button></div><select aria-label={t.timezone} value={zone} onChange={event => setZone(event.target.value)}>{zones.map(value => <option key={value}>{value}</option>)}</select></div>

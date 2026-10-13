@@ -289,6 +289,8 @@ def test_history_includes_ingestion_without_extra_status_request(repo, monkeypat
 
 
 def test_summary_cache_avoids_sample_reads_and_invalidates_after_sync(repo, monkeypatch):
+    allowances = []
+    monkeypatch.setattr(repo, "reserve_public_reads", allowances.append)
     batch = upload(repo)
     invoke("POST", "/v1/sync", batch)
     queries = []
@@ -300,9 +302,7 @@ def test_summary_cache_avoids_sample_reads_and_invalidates_after_sync(repo, monk
     first = invoke("GET", path, token=False)
     assert invoke("GET", path, token=False) == first
     assert len(queries) == 1
-    budget = repo.db.values["api_limits/public"]
-    assert budget["requests"] == 2
-    assert budget["reserved_reads"] == main.MAX_SUMMARY_SAMPLES + 1
+    assert allowances == [main.MAX_SUMMARY_SAMPLES + 1, 0]
     invoke("POST", "/v1/sync", upload(repo, generation=batch["generation"]))
     result, status, _ = invoke("GET", path, token=False)
     assert status == 200 and result["summary"]["count"] == 2

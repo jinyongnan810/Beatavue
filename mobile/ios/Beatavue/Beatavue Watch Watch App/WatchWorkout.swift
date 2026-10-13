@@ -43,6 +43,7 @@ final class WatchWorkout: NSObject {
     /// Requests permissions and starts heart-rate collection for an Other workout.
     func start() async {
         guard available, session == nil, phase != .starting, phase != .saving else { return }
+        LiveUpload.shared.requestConfiguration()
         phase = .starting
         error = nil
         saved = false
@@ -96,6 +97,7 @@ final class WatchWorkout: NSObject {
     func stop() {
         guard phase == .running || phase == .paused else { return }
         phase = .saving
+        publishLive()
         session?.stopActivity(with: Date())
     }
 
@@ -134,8 +136,15 @@ final class WatchWorkout: NSObject {
         }
     }
 
+    private func publishLive() {
+        guard let session else { return }
+        LiveUpload.shared.update(sessionID: sessionID, startedAt: session.startDate ?? Date(),
+                                 heartRate: heartRate, measuredAt: measuredAt, running: phase == .running)
+    }
+
     /// Sends the current workout state and elapsed time to the mirrored iPhone session.
     private func sendSnapshot() async {
+        publishLive()
         guard let session, let builder, phoneConnected, !sending else { return }
         sending = true
         defer { sending = false }
