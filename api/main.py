@@ -18,7 +18,7 @@ from pydantic import ValidationError
 from models import DeleteRequest, ImportRequest, LiveClearRequest, LiveUpdate, SyncBatch
 from realtime import Realtime
 from flask import Response
-from repository import Conflict, RateLimited, Repository
+from repository import RATE_LIMIT_WINDOW_SECONDS, Conflict, RateLimited, Repository
 
 MAX_BODY = 256 * 1024
 MAX_SUMMARY_SAMPLES = 20000
@@ -246,7 +246,7 @@ def api(request):
         return response({"error": "conflict", "message": str(error)}, 409)
     except RateLimited:
         content, status, headers = response({"error": "rate_limited"}, 429)
-        headers["Retry-After"] = "60"
+        headers["Retry-After"] = str(RATE_LIMIT_WINDOW_SECONDS)
         return content, status, headers
     except Exception:
         # Never print exception text: SDK errors can contain sample values or credentials.

@@ -7,6 +7,8 @@ from threading import Lock
 from google.cloud import firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
 
+RATE_LIMIT_WINDOW_SECONDS = 12 * 60 * 60
+
 
 class Conflict(Exception):
     pass
@@ -136,26 +138,29 @@ class Repository:
 
         return commit(self.db.transaction())
 
-    # Reserve request and sample-read capacity from the shared minute allowance.
+    # Reserve request and sample-read capacity from the shared 12-hour allowance.
     def reserve_public_reads(self, maximum_reads):
         """Shared demo-wide allowance; it cannot be bypassed by changing an IP header."""
-        pass
-        # ref = self.db.collection("api_limits").document("public")
-        # minute = int(datetime.now(timezone.utc).timestamp()) // 60
+        ref = self.db.collection("api_limits").document("public")
 
-        # Atomically reset or debit the current minute allowance without exceeding limits.
-        # @firestore.transactional
-        # def reserve(tx):
-        #     budget = ref.get(transaction=tx).to_dict() or {}
-        #     if budget.get("minute") != minute:
-        #         budget = {"minute": minute, "requests": 0, "reserved_reads": 0}
-        #     if budget["requests"] >= 60 or budget["reserved_reads"] + maximum_reads > 100000:
-        #         raise RateLimited()
-        #     budget["requests"] += 1
-        #     budget["reserved_reads"] += maximum_reads
-        #     tx.set(ref, budget)
+        # Atomically reset or debit the current 12-hour allowance without exceeding limits.
+        @firestore.transactional
+        def reserve(tx):
+            budget = ref.get(transaction=tx).to_dict() or {}
+            if budget.get("rateLimited") is False:
+                return
+            window = int(datetime.now(timezone.utc).timestamp()) // RATE_LIMIT_WINDOW_SECONDS
+            if budget.get("window") != window:
+                budget.update(window=window, requests=0, reserved_reads=0)
+                budget.pop("minute", None)
+            if budget["requests"] >= 60 or budget["reserved_reads"] + maximum_reads > 100000:
+                raise RateLimited()
+            budget["rateLimited"] = True
+            budget["requests"] += 1
+            budget["reserved_reads"] += maximum_reads
+            tx.set(ref, budget)
 
-        # reserve(self.db.transaction())
+        reserve(self.db.transaction())
 
     # Delete at most 200 samples or receipts, then finish cleanup when empty.
     def cleanup_chunk(self, generation):

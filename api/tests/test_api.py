@@ -244,12 +244,81 @@ def test_bounded_public_queries(repo, query):
     assert invoke("GET", "/v1/samples?" + query, token=False)[1] == 400
 
 
-# def test_public_rate_limit_is_shared_and_returns_retry_after(repo):
-#     for _ in range(60):
-#         assert invoke("GET", "/v1/sync-status", token=False)[1] == 200
-#     _, status, headers = invoke("GET", "/v1/sync-status", token=False)
-#     assert status == 429
-#     assert headers["Retry-After"] == "60"
+@pytest.fixture
+def rate_limit_clock(monkeypatch):
+    class Clock:
+        current = datetime(2026, 10, 22, tzinfo=timezone.utc)
+
+        @classmethod
+        def now(cls, tz):
+            return cls.current
+
+    monkeypatch.setattr(persistence, "datetime", Clock)
+    return Clock
+
+
+def test_public_rate_limit_is_shared_and_returns_retry_after(repo, rate_limit_clock):
+    for _ in range(60):
+        assert invoke("GET", "/v1/sync-status", token=False)[1] == 200
+    # Another instance shares the same Firestore allowance.
+    other = persistence.Repository(repo.db)
+    with pytest.raises(persistence.RateLimited):
+        other.reserve_public_reads(1)
+    before = copy.deepcopy(repo.db.values)
+    result, status, headers = invoke("GET", "/v1/sync-status", token=False)
+    assert status == 429 and result == {"error": "rate_limited"}
+    assert headers["Retry-After"] == "43200"
+    assert repo.db.values == before
+    assert repo.db.values["api_limits/public"]["rateLimited"] is True
+
+
+def test_public_sample_read_budget_resets_after_12_hours(repo, rate_limit_clock):
+    repo.reserve_public_reads(100000)
+    with pytest.raises(persistence.RateLimited):
+        repo.reserve_public_reads(1)
+    rate_limit_clock.current = datetime(2026, 10, 22, 11, 59, 59, tzinfo=timezone.utc)
+    with pytest.raises(persistence.RateLimited):
+        repo.reserve_public_reads(1)
+    rate_limit_clock.current = datetime(2026, 10, 22, 12, tzinfo=timezone.utc)
+    repo.reserve_public_reads(1)
+    budget = repo.db.values["api_limits/public"]
+    assert budget["requests"] == budget["reserved_reads"] == 1
+    assert budget["rateLimited"] is True
+
+
+def test_rate_limit_flag_can_be_changed_without_restart(repo, rate_limit_clock):
+    repo.reserve_public_reads(100000)
+    budget = repo.db.values["api_limits/public"]
+    budget["rateLimited"] = False
+    before = copy.deepcopy(repo.db.values)
+    for _ in range(61):
+        assert invoke("GET", "/v1/sync-status", token=False)[1] == 200
+    repo.reserve_public_reads(100001)
+    assert repo.db.values == before
+    repo.db.values["api_limits/public"]["rateLimited"] = True
+    assert invoke("GET", "/v1/sync-status", token=False)[1] == 429
+
+
+def test_disabled_flag_without_counters_survives_window_changes(repo, rate_limit_clock):
+    repo.db.values["api_limits/public"] = {"rateLimited": False}
+    repo.reserve_public_reads(100001)
+    rate_limit_clock.current = datetime(2026, 10, 22, 12, tzinfo=timezone.utc)
+    repo.reserve_public_reads(100001)
+    assert repo.db.values["api_limits/public"] == {"rateLimited": False}
+
+
+@pytest.mark.parametrize("flag", [None, 0, "false", True])
+def test_only_boolean_false_disables_rate_limiting(repo, rate_limit_clock, flag):
+    repo.reserve_public_reads(100000)
+    repo.db.values["api_limits/public"]["rateLimited"] = flag
+    assert invoke("GET", "/v1/sync-status", token=False)[1] == 429
+
+
+def test_existing_budget_without_flag_defaults_to_enabled(repo, rate_limit_clock):
+    repo.reserve_public_reads(1)
+    del repo.db.values["api_limits/public"]["rateLimited"]
+    repo.reserve_public_reads(1)
+    assert repo.db.values["api_limits/public"]["rateLimited"] is True
 
 
 def test_oversized_payload(repo):
@@ -331,12 +400,12 @@ def test_cached_summary_still_rechecks_fence(repo, monkeypatch):
     assert invoke("GET", path, token=False)[1] == 409
 
 
-# def test_cached_summary_still_enforces_request_allowance(repo, monkeypatch):
-#     monkeypatch.setattr(repo, "query", lambda *args: [])
-#     path = "/v1/summaries?" + HISTORY_QUERY
-#     for _ in range(60):
-#         assert invoke("GET", path, token=False)[1] == 200
-    # assert invoke("GET", path, token=False)[1] == 429
+def test_cached_summary_still_enforces_request_allowance(repo, monkeypatch, rate_limit_clock):
+    monkeypatch.setattr(repo, "query", lambda *args: [])
+    path = "/v1/summaries?" + HISTORY_QUERY
+    for _ in range(60):
+        assert invoke("GET", path, token=False)[1] == 200
+    assert invoke("GET", path, token=False)[1] == 429
 
 
 @pytest.mark.parametrize("path", [
