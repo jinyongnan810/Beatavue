@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 import pytest
-from flask import Flask, request
+from flask import Flask, request, make_response
 
 import main
 import repository as persistence
@@ -113,8 +113,8 @@ def invoke(method, path, payload=None, token=True, raw=None):
     headers = {"Authorization": "Bearer test-only-" + "x" * 40} if token else {}
     with app.test_request_context(path, method=method, json=payload if raw is None else None,
                                   data=raw, content_type="application/json", headers=headers):
-        value, code, response_headers = main.api(request)
-        return json.loads(value), code, response_headers
+        result = make_response(main.api(request))
+        return result.get_json(), result.status_code, result.headers
 
 
 def sample(uuid=None):

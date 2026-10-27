@@ -154,10 +154,10 @@ def test_chronological_order_handles_fractional_seconds_and_other_generations(li
 def test_public_stream_has_cors_no_cache_and_only_public_events(repo, live, monkeypatch):
     from flask import Flask, request
     monkeypatch.setattr(live, "events", lambda status: iter(['event: live\ndata: {"updating": false}\n\n']))
-    with Flask(__name__).test_request_context('/v1/live'):
+    with Flask(__name__).test_request_context('/v1/live', headers={'Origin': main.WEB_ORIGIN}):
         response = main.api(request)
         assert response.status_code == 200
-        assert response.headers['Access-Control-Allow-Origin'] == '*'
+        assert response.headers['Access-Control-Allow-Origin'] == main.WEB_ORIGIN
         assert response.headers['Cache-Control'] == 'no-store'
         assert response.mimetype == 'text/event-stream'
         assert 'generation' not in response.get_data(as_text=True)

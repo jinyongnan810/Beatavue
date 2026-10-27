@@ -22,6 +22,8 @@ from repository import RATE_LIMIT_WINDOW_SECONDS, Conflict, RateLimited, Reposit
 
 MAX_BODY = 256 * 1024
 MAX_SUMMARY_SAMPLES = 20000
+WEB_ORIGIN = "https://beatavue.web.app"
+PUBLIC_PATHS = {"/v1/live", "/v1/sync-status", "/v1/samples", "/v1/summaries"}
 
 
 # Reuse one Firestore repository across requests in this function instance.
@@ -147,6 +149,31 @@ def summaries(docs, zone, bucket):
 # Route public reads and authenticated owner changes to the dataset repository.
 @functions_framework.http
 def api(request):
+    path = request.path.rstrip("/")
+    if path not in PUBLIC_PATHS or request.method not in ("GET", "OPTIONS"):
+        return route(request)
+    origin = request.headers.get("Origin")
+    # Same-origin GETs may omit Origin. This check is browser isolation, not authentication.
+    if origin and origin != WEB_ORIGIN:
+        return response({"error": "origin_not_allowed"}, 403)
+    if request.method == "OPTIONS":
+        requested = {h.strip().lower() for h in request.headers.get("Access-Control-Request-Headers", "").split(",") if h.strip()}
+        if origin != WEB_ORIGIN or request.headers.get("Access-Control-Request-Method") != "GET" or requested - {"x-firebase-appcheck"}:
+            return response({"error": "cors_not_allowed"}, 403)
+        result = Response(status=204, headers={"Access-Control-Allow-Methods": "GET",
+                                             "Access-Control-Allow-Headers": "X-Firebase-AppCheck",
+                                             "Access-Control-Max-Age": "600"})
+    else:
+        from flask import make_response
+        result = make_response(route(request))
+    if origin == WEB_ORIGIN:
+        result.headers["Access-Control-Allow-Origin"] = WEB_ORIGIN
+        result.headers["Access-Control-Expose-Headers"] = "Retry-After"
+    result.headers["Vary"] = "Origin"
+    return result
+
+
+def route(request):
     if request.content_length and request.content_length > MAX_BODY:
         return response({"error": "payload_too_large"}, 413)
     path = request.path.rstrip("/")
@@ -173,7 +200,6 @@ def api(request):
         if request.method == "GET" and path == "/v1/live":
             return Response(realtime().events(repository().status), mimetype="text/event-stream",
                             headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no",
-                                     "Access-Control-Allow-Origin": "*",
                                      "X-Content-Type-Options": "nosniff"})
         repo = repository()
         if request.method == "POST" and path == "/v1/import":
