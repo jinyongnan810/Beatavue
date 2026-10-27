@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { afterEach, test } from 'node:test';
-import { clearHistoryCache, loadHistory } from '../src/api.ts';
+import { clearHistoryCache, loadHistory as loadAuthenticatedHistory } from '../src/api.ts';
+import { appCheckHeaders } from '../src/appCheck.ts';
+const loadHistory = (params, raw, signal) => loadAuthenticatedHistory(params, raw, signal,
+  async () => ({ 'X-Firebase-AppCheck': 'test-attestation' }));
 
 const originalFetch = globalThis.fetch;
 const params = { metric: 'heart_rate', from: '2026-10-09T00:00:00Z', to: '2026-10-10T00:00:00Z', timezone: 'UTC', bucket: 'hour' };
@@ -8,9 +11,16 @@ const stamp = '2026-10-10T01:00:00Z';
 const sample = (value, start) => ({ value, start, end: start, unit: 'bpm', source: 'Apple Health' });
 afterEach(() => { globalThis.fetch = originalFetch; clearHistoryCache(); });
 
+test('missing attestation configuration fails closed before fetching health data', async () => {
+  globalThis.fetch = async () => { assert.fail('Unauthenticated API request'); };
+  await assert.rejects(appCheckHeaders(), /verification is not configured/);
+  await assert.rejects(loadAuthenticatedHistory(params, true, new AbortController().signal), /verification is not configured/);
+});
+
 test('day loads only sample pages and derives exact statistics and latest', async () => {
   const calls = [];
-  globalThis.fetch = async url => {
+  globalThis.fetch = async (url, options) => {
+    assert.equal(options.headers['X-Firebase-AppCheck'], 'test-attestation');
     calls.push(url);
     const query = new URL(url, 'https://example.test');
     assert.equal(query.pathname, '/v1/samples');

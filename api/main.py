@@ -18,6 +18,7 @@ from pydantic import ValidationError
 from models import DeleteRequest, ImportRequest, LiveClearRequest, LiveUpdate, SyncBatch
 from realtime import Realtime
 from flask import Response
+from security import verify, admission, InvalidAttestation, AdmissionLimited
 from repository import RATE_LIMIT_WINDOW_SECONDS, Conflict, RateLimited, Repository
 
 MAX_BODY = 256 * 1024
@@ -181,6 +182,10 @@ def route(request):
     if (request.method, path) in private and not authorized(request):
         return response({"error": "unauthorized"}, 401)
     try:
+        reservation = None
+        if request.method == "GET" and path in PUBLIC_PATHS:
+            client = verify(request)
+            reservation = admission().reserve(client, streaming=path == "/v1/live")
         if request.method == "POST" and path == "/v1/live/clear":
             realtime().clear(str(body(request, LiveClearRequest).generation))
             return response({"cleared": True})
@@ -198,9 +203,27 @@ def route(request):
                 raise Conflict("Publication changed")
             return response({"accepted": True})
         if request.method == "GET" and path == "/v1/live":
-            return Response(realtime().events(repository().status), mimetype="text/event-stream",
+            def events():
+                try:
+                    yield from realtime().events(repository().status)
+                finally:
+                    release_stream()
+
+            def release_stream():
+                nonlocal reservation
+                current, reservation = reservation, None
+                if current:
+                    try:
+                        admission().release(current)
+                    except Exception:
+                        # The lease expires even if release fails; never log credentials.
+                        print('{"event":"stream_release_failed"}')
+
+            result = Response(events(), mimetype="text/event-stream",
                             headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no",
                                      "X-Content-Type-Options": "nosniff"})
+            result.call_on_close(release_stream)
+            return result
         repo = repository()
         if request.method == "POST" and path == "/v1/import":
             return response(repo.begin_import(body(request, ImportRequest).import_id))
@@ -264,6 +287,12 @@ def route(request):
                 repo.cache_summary(summary_key, dict(result))
             return response(result)
         return response({"error": "not_found"}, 404)
+    except InvalidAttestation:
+        return response({"error": "invalid_app_check"}, 401)
+    except AdmissionLimited as error:
+        content, status, headers = response({"error": "rate_limited"}, 429)
+        headers["Retry-After"] = str(error.retry_after)
+        return content, status, headers
     except OverflowError:
         return response({"error": "payload_too_large"}, 413)
     except (ValidationError, ValueError, KeyError, TypeError, ZoneInfoNotFoundError):

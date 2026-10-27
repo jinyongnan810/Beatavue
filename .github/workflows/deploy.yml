@@ -48,6 +48,7 @@ jobs:
         env:
           UPLOAD_TOKEN_VERSION: ${{ inputs.upload_token_version }}
           BILLING_ACCOUNT: ${{ vars.GCP_BILLING_ACCOUNT }}
+          TF_VAR_app_check_app_id: ${{ vars.FIREBASE_WEB_APP_ID }}
         run: |
           terraform -chdir=infra init -backend-config=backend.hcl.example
           # Keep optional budget management consistent with the existing stack.
@@ -55,6 +56,10 @@ jobs:
           sh scripts/deploy-api.sh
       - name: Deploy dashboard
         if: inputs.component != 'api'
+        env:
+          VITE_FIREBASE_API_KEY: ${{ vars.FIREBASE_WEB_API_KEY }}
+          VITE_FIREBASE_APP_ID: ${{ vars.FIREBASE_WEB_APP_ID }}
+          VITE_RECAPTCHA_ENTERPRISE_SITE_KEY: ${{ vars.RECAPTCHA_ENTERPRISE_SITE_KEY }}
         run: |
           npm install --prefix "$RUNNER_TEMP/firebase-cli" firebase-tools@15.33.0
           export PATH="$RUNNER_TEMP/firebase-cli/node_modules/.bin:$PATH"

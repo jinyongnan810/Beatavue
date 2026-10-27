@@ -23,8 +23,27 @@ def live_repo(monkeypatch):
     # Unique demo namespace prevents collisions with another local application.
     repo = Repository(firestore.Client(project="demo-beatavue-test-" + uuid4().hex[:8]))
     monkeypatch.setattr(main, "repository", lambda: repo)
+    from security import Admission
+    monkeypatch.setattr(main, "verify", lambda request: "emulator-client")
+    monkeypatch.setattr(main, "admission", lambda: Admission(repo.db))
     monkeypatch.setenv("UPLOAD_TOKEN", "test-only-" + "x" * 40)
     return repo
+
+
+def test_sdk_stream_admission_is_atomic_across_instances(live_repo):
+    from security import Admission, AdmissionLimited
+    def reserve(_):
+        try:
+            return Admission(live_repo.db).reserve("shared-client", True)
+        except AdmissionLimited:
+            return None
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        results = list(pool.map(reserve, range(4)))
+    accepted = [result for result in results if result]
+    assert len(accepted) == 2
+    for result in accepted:
+        Admission(live_repo.db).release(result)
+    assert Admission(live_repo.db).reserve("shared-client", True)
 
 
 def batch(generation, values):

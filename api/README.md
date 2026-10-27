@@ -4,6 +4,8 @@
 
 健康データの送信・取得・削除。
 
+公開APIのApp Check・CORS・レート制限と配備前の設定: [Security](SECURITY.md)。
+
 ```mermaid
 flowchart LR
     Phone[iPhone] -->|送信| API[api/]

@@ -1,3 +1,5 @@
+import { appCheckHeaders } from './appCheck.ts';
+
 export class HistoryError extends Error {
   readonly status: number;
   constructor(message: string, status: number) { super(message); this.status = status; }
@@ -14,7 +16,7 @@ type History = { summary: Summary; samples: Sample[] };
 const historyCache = new Map<string, History>();
 export const clearHistoryCache = () => historyCache.clear();
 
-export async function loadHistory(params: Record<string, string>, raw: boolean, signal: AbortSignal): Promise<History> {
+export async function loadHistory(params: Record<string, string>, raw: boolean, signal: AbortSignal, headers = appCheckHeaders): Promise<History> {
   const key = JSON.stringify([raw, params.metric, params.from, params.to, raw ? null : params.timezone, raw ? null : params.bucket]);
   const cached = historyCache.get(key);
   if (cached) return cached;
@@ -27,7 +29,7 @@ export async function loadHistory(params: Record<string, string>, raw: boolean, 
       const page: SamplePage = await get('/v1/samples', {
         metric: params.metric, from: params.from, to: params.to,
         limit: '500', ...(cursor ? { cursor } : {}),
-      }, signal);
+      }, signal, headers);
       if (!samples.length) ingestion = page.last_ingestion;
       samples.push(...page.samples);
       cursor = page.next_cursor;
@@ -47,7 +49,7 @@ export async function loadHistory(params: Record<string, string>, raw: boolean, 
       bucket: params.bucket, timezone: params.timezone, last_ingestion: ingestion,
     } };
   } else {
-    result = { summary: await get<Summary>('/v1/summaries', params, signal), samples: [] };
+    result = { summary: await get<Summary>('/v1/summaries', params, signal, headers), samples: [] };
   }
   if (!signal.aborted) {
     historyCache.set(key, result);
@@ -56,10 +58,11 @@ export async function loadHistory(params: Record<string, string>, raw: boolean, 
   return result;
 }
 
-export async function get<T>(path: string, params: Record<string, string>, signal: AbortSignal): Promise<T> {
-  const response = await fetch(`${path}?${new URLSearchParams(params)}`, { signal });
+export async function get<T>(path: string, params: Record<string, string>, signal: AbortSignal, headers = appCheckHeaders): Promise<T> {
+  const response = await fetch(`${path}?${new URLSearchParams(params)}`, { signal, headers: await headers() });
   if (!response.ok) {
     const messages: Record<number, string> = {
+      401: 'Website verification failed. Reload the page and try again.',
       400: 'This date range or timezone could not be queried.',
       409: 'Published data changed. Refresh to load the new dataset.',
       422: 'Too many measurements in this range. Select a shorter period.',

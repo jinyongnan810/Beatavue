@@ -95,6 +95,11 @@ class Database:
 
 @pytest.fixture
 def repo(monkeypatch):
+    from unittest.mock import MagicMock
+    monkeypatch.setattr(main, "verify", lambda request: "verified-test-client")
+    limiter = MagicMock()
+    limiter.reserve.return_value = ("verified-test-client", "test-lease")
+    monkeypatch.setattr(main, "admission", lambda: limiter)
     def atomic(function):
         def execute(tx):
             result = function(tx)

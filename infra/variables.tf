@@ -10,6 +10,15 @@ variable "region" {
   type    = string
   default = "asia-northeast1"
 }
+variable "app_check_app_id" {
+  description = "Firebase web app ID registered with App Check (1:256425564793:web:...). Required when deploying the API."
+  type        = string
+  default     = ""
+  validation {
+    condition     = var.app_check_app_id == "" || can(regex("^1:256425564793:web:[a-f0-9]+$", var.app_check_app_id))
+    error_message = "Use the Firebase web app ID belonging to beatavue."
+  }
+}
 variable "deploy_functions" {
   type    = bool
   default = false

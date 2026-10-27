@@ -15,7 +15,8 @@ locals {
     "artifactregistry.googleapis.com", "firestore.googleapis.com", "secretmanager.googleapis.com",
     "cloudtasks.googleapis.com", "firebasedatabase.googleapis.com", "firebase.googleapis.com", "firebasehosting.googleapis.com",
     "firebaserules.googleapis.com", "iam.googleapis.com", "logging.googleapis.com",
-    "monitoring.googleapis.com", "billingbudgets.googleapis.com", "storage.googleapis.com"
+    "monitoring.googleapis.com", "billingbudgets.googleapis.com", "storage.googleapis.com",
+    "firebaseappcheck.googleapis.com", "recaptchaenterprise.googleapis.com"
   ])
 }
 resource "google_project_service" "apis" {
@@ -216,6 +217,12 @@ resource "google_cloudfunctions2_function" "api" {
   count    = var.deploy_functions ? 1 : 0
   name     = "beatavue-api"
   location = var.region
+  lifecycle {
+    precondition {
+      condition     = var.app_check_app_id != ""
+      error_message = "Configure app_check_app_id before deploying the protected API."
+    }
+  }
   build_config {
     runtime           = "python312"
     entry_point       = "api"
@@ -237,11 +244,13 @@ resource "google_cloudfunctions2_function" "api" {
     timeout_seconds                  = 55
     service_account_email            = google_service_account.api.email
     environment_variables = {
-      GOOGLE_CLOUD_PROJECT  = var.project_id
-      REALTIME_DATABASE_URL = google_firebase_database_instance.live.database_url
-      REGION                = var.region
-      CLEANUP_URL           = google_cloudfunctions2_function.cleanup[0].service_config[0].uri
-      TASK_SERVICE_ACCOUNT  = google_service_account.tasks.email
+      GOOGLE_CLOUD_PROJECT    = var.project_id
+      FIREBASE_PROJECT_NUMBER = data.google_project.current.number
+      APP_CHECK_APP_ID        = var.app_check_app_id
+      REALTIME_DATABASE_URL   = google_firebase_database_instance.live.database_url
+      REGION                  = var.region
+      CLEANUP_URL             = google_cloudfunctions2_function.cleanup[0].service_config[0].uri
+      TASK_SERVICE_ACCOUNT    = google_service_account.tasks.email
     }
     secret_environment_variables {
       key        = "UPLOAD_TOKEN"
@@ -261,6 +270,15 @@ resource "google_cloud_run_service_iam_member" "public_api" {
   service  = google_cloudfunctions2_function.api[0].name
   role     = "roles/run.invoker"
   member   = "allUsers"
+}
+
+resource "google_firestore_field" "client_expiry" {
+  project    = var.project_id
+  database   = "(default)"
+  collection = "api_clients"
+  field      = "expires_at"
+  ttl_config {}
+  depends_on = [google_firestore_database.default]
 }
 
 resource "google_billing_budget" "demo" {

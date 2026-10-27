@@ -23,9 +23,9 @@ test('Japanese dates and bucket descriptions use localized text', () => {
 test('API failures retain status for translation, including fallback statuses', async () => {
   const originalFetch = globalThis.fetch;
   try {
-    for (const status of [400, 409, 422, 429, 503, 500]) {
+    for (const status of [400, 401, 409, 422, 429, 503, 500]) {
       globalThis.fetch = async () => new Response(null, { status });
-      await assert.rejects(get('/v1/samples', {}, new AbortController().signal), failure => {
+      await assert.rejects(get('/v1/samples', {}, new AbortController().signal, async () => ({ 'X-Firebase-AppCheck': 'test' })), failure => {
         assert.ok(failure instanceof HistoryError);
         assert.equal(failure.status, status);
         const message = translations.ja.errors[failure.status] ?? translations.ja.statusError(failure.status);

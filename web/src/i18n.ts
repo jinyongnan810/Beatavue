@@ -28,6 +28,7 @@ const en = {
   loadError: 'Could not load history.', tooMany: 'Too many samples to display.',
   errors: {
     400: 'This date range or timezone could not be queried.',
+    401: 'Website verification failed. Reload the page and try again.',
     409: 'Published data changed. Refresh to load the new dataset.',
     422: 'Too many measurements in this range. Select a shorter period.',
     429: 'The public API is busy. Please try again shortly.',
@@ -58,6 +59,7 @@ const ja: typeof en = {
   loadError: '履歴を読み込めませんでした。', tooMany: '表示できる測定数を超えています。',
   errors: {
     400: 'この期間またはタイムゾーンのデータを取得できませんでした。',
+    401: 'サイトの検証に失敗しました。ページを再読み込みして再試行してください。',
     409: '公開データが変更されました。更新して最新のデータを読み込んでください。',
     422: 'この期間の測定数が多すぎます。より短い期間を選んでください。',
     429: '公開APIが混み合っています。少し待ってから再試行してください。',

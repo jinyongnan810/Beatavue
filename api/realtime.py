@@ -67,7 +67,7 @@ class Realtime:
                 "measured_at": stamp if active else None, "updated_at": value.get("updated_at")}
 
     def events(self, publication_state):
-        # Bound each browser connection below the Hosting/function deadline. EventSource reconnects.
+        # Bound each browser connection below the function deadline. The fetch client reconnects.
         # The reader runs independently so an idle upstream cannot delay pings or the deadline.
         queue = Queue(maxsize=1)
         stopped = Event()
