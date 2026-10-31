@@ -239,7 +239,7 @@ resource "google_cloudfunctions2_function" "api" {
     available_memory                 = "256M"
     available_cpu                    = "1"
     min_instance_count               = 0
-    max_instance_count               = 2
+    max_instance_count               = 1
     max_instance_request_concurrency = 8
     timeout_seconds                  = 55
     service_account_email            = google_service_account.api.email
